@@ -6,7 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="7b7b89e4-7f03-402f-9ca1-bfaff68193cd" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-bake.hcl" beforeDir="false" afterPath="$PROJECT_DIR$/docker-bake.hcl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tasks/pipeline.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/tasks/pipeline.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tasks/pipelinerun.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/tasks/pipelinerun.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

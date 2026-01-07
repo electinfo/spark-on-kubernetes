@@ -1,6 +1,6 @@
 # spark-driver: Spark driver container for K8s client/cluster mode
 # Used by: spark.kubernetes.driver.container.image
-l#
+#
 # RUNTIME CONFIG FILES (mounted via K8s ConfigMap):
 # ┌─────────────────────────────────────────┬─────────────────────────────────────────┐
 # │ Source (this repo)                      │ Mount Path                              │
