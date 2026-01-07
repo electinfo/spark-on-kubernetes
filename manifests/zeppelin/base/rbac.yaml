@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zeppelin-server
+  namespace: zeppelin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zeppelin-server-role
+rules:
+  # Pod management for interpreters and Spark executors
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["create", "get", "update", "patch", "list", "delete", "watch"]
+  # Service management for Spark driver/executor communication
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "get", "update", "patch", "list", "delete", "watch"]
+  # ConfigMap management for interpreter configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "get", "update", "patch", "list", "delete", "watch"]
+  # RBAC for interpreter pods (Spark executors need their own roles)
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["bind", "create", "get", "update", "patch", "list", "delete", "watch"]
+  # PVC access for persistent storage
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zeppelin-server-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: zeppelin-server
+    namespace: zeppelin
+roleRef:
+  kind: ClusterRole
+  name: zeppelin-server-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Role for Spark executors in zeppelin namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark-executor-role
+  namespace: zeppelin
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark-executor-role-binding
+  namespace: zeppelin
+subjects:
+  - kind: ServiceAccount
+    name: zeppelin-server
+    namespace: zeppelin
+roleRef:
+  kind: Role
+  name: spark-executor-role
+  apiGroup: rbac.authorization.k8s.io

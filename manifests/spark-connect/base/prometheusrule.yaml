@@ -1,0 +1,38 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: spark-connect
+  namespace: spark
+  labels:
+    release: kube-prom-stack
+spec:
+  groups:
+    - name: spark-connect
+      rules:
+        - alert: SparkConnectDown
+          expr: up{job="spark-connect"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Spark Connect server is down"
+            description: "Spark Connect server has been unreachable for more than 2 minutes."
+
+        - alert: SparkConnectHighHeapUsage
+          expr: metrics_spark_connect_server_driver_jvm_heap_usage > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Spark Connect high heap usage"
+            description: "Spark Connect driver JVM heap usage is above 90%."
+
+        - alert: SparkConnectNoExecutors
+          expr: metrics_spark_connect_server_driver_LiveListenerBus_numEventsPosted == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Spark Connect has no active executors"
+            description: "Spark Connect server appears to have no active executors for 10 minutes."

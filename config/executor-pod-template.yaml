@@ -1,0 +1,21 @@
+# Executor pod template for Spark on K8s
+# Mount to: /opt/spark/conf/executor-pod-template.yaml
+# Referenced by: spark.kubernetes.executor.podTemplateFile
+
+apiVersion: v1
+kind: Pod
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  volumes:
+  - name: spark-checkpoints
+    nfs:
+      server: 10.10.0.10
+      path: /volume1/spark-checkpoints
+  containers:
+  - name: spark-kubernetes-executor
+    volumeMounts:
+    - name: spark-checkpoints
+      mountPath: /mnt/spark-checkpoints

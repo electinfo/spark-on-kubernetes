@@ -1,0 +1,19 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spark-connect
+  namespace: spark
+  labels:
+    release: kube-prom-stack
+spec:
+  selector:
+    matchLabels:
+      app: spark-connect-server
+  namespaceSelector:
+    matchNames:
+      - spark
+  endpoints:
+    - port: spark-ui
+      path: /metrics/prometheus/
+      interval: 30s

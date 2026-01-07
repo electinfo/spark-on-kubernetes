@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7b7b89e4-7f03-402f-9ca1-bfaff68193cd" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/100-interpreter-spec.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/core-site.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/executor-pod-template.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/spark-defaults.conf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-bake.hcl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/spark-base/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/spark-connect-server/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/spark-driver/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/spark-executor/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/zeppelin-interpreter/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/zeppelin-server/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/application.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/base/grafana-dashboard.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/base/kustomization.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/base/prometheusrule.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/base/servicemonitor.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/base/spark-connect-server.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/build-push.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/ingress-routes.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/kustomization.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/pipeline.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/restart-sparkapplication.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/spark-connect/tasks/triggers.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/application.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/configmap.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/deployment.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/ingress-route.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/kustomization.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/namespace.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/pvc.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/rbac.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/service.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/spark-checkpoint-pv.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/vault-auth.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/base/vault-static-secret.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/tasks/build-push.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/tasks/kustomization.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/manifests/zeppelin/tasks/pipeline.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="37upHuM8G1cUWLHdHRAcvfqOyJ4" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "master",
+    "javascript.preferred.runtime.type.id": "node",
+    "last_opened_file_path": "/Users/steveblackmon/git/electinfo/spark-on-kubernetes",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-c7e53b3be11b-JavaScript-WS-253.28294.332" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7b7b89e4-7f03-402f-9ca1-bfaff68193cd" name="Changes" comment="" />
+      <created>1767762726042</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1767762726042</updated>
+      <workItem from="1767762727093" duration="539000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

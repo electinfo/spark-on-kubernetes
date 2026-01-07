@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-spark-connect
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/electinfo/ops.git'
+    path: 'app-spark-connect/base'
+    targetRevision: main
+  destination:
+    namespace: spark
+    server: 'https://kubernetes.default.svc'
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

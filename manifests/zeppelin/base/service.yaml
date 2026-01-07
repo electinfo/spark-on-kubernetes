@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeppelin-server
+  namespace: zeppelin
+  labels:
+    app.kubernetes.io/name: zeppelin-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: rpc
+      port: 12320
+      targetPort: 12320
+  selector:
+    app.kubernetes.io/name: zeppelin-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeppelin-nodeport
+  namespace: zeppelin
+  labels:
+    app.kubernetes.io/name: zeppelin-server
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30889
+  selector:
+    app.kubernetes.io/name: zeppelin-server

@@ -1,0 +1,11 @@
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: zeppelin-vault-auth
+  namespace: zeppelin
+spec:
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: zeppelin
+    serviceAccount: zeppelin-server

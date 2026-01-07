@@ -1,0 +1,29 @@
+---
+# Example PipelineRun to build all images
+# kubectl create -f tasks/pipelinerun.yaml
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: spark-images-build-
+  namespace: tekton-pipelines
+spec:
+  pipelineRef:
+    name: spark-images-build
+  params:
+    - name: git-revision
+      value: main
+    - name: registry
+      value: localhost:32000
+    - name: tag
+      value: latest
+    - name: targets
+      value: default  # Build all images
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi

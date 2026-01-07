@@ -1,0 +1,39 @@
+# Shared NFS volume for Spark checkpoints
+# Required for GraphFrames ConnectedComponents algorithm
+#
+# SETUP ON ASUSTOR:
+# 1. Create the directory on asustor:
+#    mkdir -p /volume1/spark-checkpoints
+#    chmod 777 /volume1/spark-checkpoints
+# 2. Create NFS export in Control Panel > Shared Folder > NFS Permissions:
+#    /volume1/spark-checkpoints - Allow: 10.0.0.0/8, Privileges: Read/Write
+#
+# This PV is for documentation/management purposes.
+# The actual mount is done via direct NFS references in:
+# - app-zeppelin/base/deployment.yaml (Zeppelin driver)
+# - app-spark-connect/base/spark-connect-server.yaml (executor pod template)
+# - zeppelin/conf/interpreter-setting.json (Zeppelin's dynamic executor pods)
+#
+# Mount path: /mnt/spark-checkpoints
+# Checkpoint URL: file:///mnt/spark-checkpoints
+#
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: spark-checkpoint-pv
+  labels:
+    type: nfs
+    app: spark
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+  nfs:
+    server: 10.10.0.10
+    path: /volume1/spark-checkpoints

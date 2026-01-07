@@ -1,0 +1,234 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zeppelin-server
+  namespace: zeppelin
+  labels:
+    app.kubernetes.io/name: zeppelin-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zeppelin-server
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zeppelin-server
+    spec:
+      serviceAccountName: zeppelin-server
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - aegis-blue
+                      - aegis-green
+                      - aegis-red
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: zeppelin-server-conf
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+        - name: zeppelin-notebook
+          persistentVolumeClaim:
+            claimName: zeppelin-notebook-pvc
+        - name: zeppelin-conf
+          persistentVolumeClaim:
+            claimName: zeppelin-conf-pvc
+        - name: github-ssh-key
+          secret:
+            secretName: zeppelin-github-secret
+            defaultMode: 0400
+        - name: ssh-config
+          emptyDir: {}
+        # NFS volume for Spark checkpoints (shared with executors)
+        - name: spark-checkpoints
+          nfs:
+            server: 10.10.0.10
+            path: /volume1/spark-checkpoints
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              REPO_URL="git@github.com:electinfo/zeppelin.git"
+
+              # SSH setup for root (init container runs as root)
+              mkdir -p /root/.ssh
+              cp /ssh-key/deploy-key /root/.ssh/id_ed25519
+              chmod 600 /root/.ssh/id_ed25519
+              ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null
+              git config --global --add safe.directory /notebook
+
+              cd /notebook
+              if [ -d ".git" ]; then
+                echo "Syncing existing repo..."
+                git remote set-url origin "$REPO_URL" 2>/dev/null || git remote add origin "$REPO_URL"
+                git fetch origin main
+                # Ensure we're on main branch tracking origin/main
+                git checkout -B main origin/main
+              else
+                echo "Cloning repo..."
+                git clone -b main "$REPO_URL" /tmp/repo
+                cp -r /tmp/repo/. /notebook/
+                rm -rf /tmp/repo
+              fi
+
+              chown -R 1000:1000 /notebook
+              echo "Sync complete"
+          volumeMounts:
+            - name: zeppelin-notebook
+              mountPath: /notebook
+            - name: github-ssh-key
+              mountPath: /ssh-key
+              readOnly: true
+      containers:
+        - name: zeppelin-server
+          image: localhost:32000/electinfo/zeppelin:latest
+          imagePullPolicy: Always
+          command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "ps -ef | grep org.apache.zeppelin.server.ZeppelinServer | grep -v grep | awk '{print $2}' | xargs kill"]
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: https
+              containerPort: 8443
+            - name: rpc
+              containerPort: 12320
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.uid
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: ZEPPELIN_IN_DOCKER
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: zeppelin-server-conf-map
+          volumeMounts:
+            - name: zeppelin-notebook
+              mountPath: /opt/zeppelin/notebook
+            - name: zeppelin-conf
+              mountPath: /opt/zeppelin/conf
+            - name: github-ssh-key
+              mountPath: /home/zeppelin/.ssh/id_ed25519
+              subPath: deploy-key
+              readOnly: true
+            - name: spark-checkpoints
+              mountPath: /mnt/spark-checkpoints
+          resources:
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+
+        - name: zeppelin-server-gateway
+          image: nginx:1.25-alpine
+          command: ["/bin/sh", "-c"]
+          env:
+            - name: SERVICE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: zeppelin-server-conf-map
+                  key: SERVICE_DOMAIN
+          args:
+            - |
+              cp -f /tmp/conf/nginx.conf /etc/nginx/nginx.conf
+              sed -i -e "s/SERVICE_DOMAIN/$SERVICE_DOMAIN/g" /etc/nginx/nginx.conf
+              sed -i -e "s/NAMESPACE/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/g" /etc/nginx/nginx.conf
+              cat /etc/nginx/nginx.conf
+              /usr/sbin/nginx
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /tmp/conf
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx", "-s", "quit"]
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+
+        - name: git-sync
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Setup SSH
+              mkdir -p /root/.ssh
+              cp /ssh-key/deploy-key /root/.ssh/id_ed25519
+              chmod 600 /root/.ssh/id_ed25519
+              ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null
+              git config --global --add safe.directory /notebook
+              git config --global user.email "zeppelin@elect.info"
+              git config --global user.name "Zeppelin Server"
+
+              cd /notebook
+
+              # Ensure we're on main branch
+              if [ -d ".git" ]; then
+                git fetch origin main 2>/dev/null || true
+                git checkout main 2>/dev/null || git checkout -b main origin/main 2>/dev/null || true
+              fi
+
+              echo "Starting git-sync sidecar (1 min interval)..."
+              while true; do
+                sleep 60
+                cd /notebook
+                if [ -d ".git" ]; then
+                  # Ensure on main branch
+                  git checkout main 2>/dev/null || true
+
+                  # Check for changes
+                  if ! git diff --quiet HEAD 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+                    echo "$(date): Changes detected, committing..."
+                    git add -A
+                    git commit -m "Auto-commit from Zeppelin $(date -Iseconds)" || true
+                  fi
+
+                  # Push if we have commits ahead of origin
+                  LOCAL=$(git rev-parse HEAD 2>/dev/null)
+                  REMOTE=$(git rev-parse origin/main 2>/dev/null || echo "none")
+                  if [ "$LOCAL" != "$REMOTE" ]; then
+                    echo "$(date): Pushing to origin..."
+                    git push origin main && echo "Push successful" || echo "Push failed"
+                  fi
+                fi
+              done
+          volumeMounts:
+            - name: zeppelin-notebook
+              mountPath: /notebook
+            - name: github-ssh-key
+              mountPath: /ssh-key
+              readOnly: true
+          resources:
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+            requests:
+              memory: "32Mi"
+              cpu: "10m"

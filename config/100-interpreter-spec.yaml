@@ -1,0 +1,181 @@
+# Zeppelin interpreter pod spec
+# Mount to: /opt/zeppelin/k8s/interpreter/100-interpreter-spec.yaml
+#
+# This template defines how Zeppelin spawns interpreter pods (Spark driver)
+# Uses localhost:32000/electinfo/zeppelin-interpreter:latest
+
+kind: Pod
+apiVersion: v1
+metadata:
+  namespace: {{zeppelin.k8s.interpreter.namespace}}
+  name: {{zeppelin.k8s.interpreter.pod.name}}
+  labels:
+    app: {{zeppelin.k8s.interpreter.pod.name}}
+    interpreterGroupId: {{zeppelin.k8s.interpreter.group.id}}
+    interpreterSettingName: {{zeppelin.k8s.interpreter.setting.name}}
+    user: {{ zeppelin.k8s.interpreter.user }}
+  {% if zeppelin.k8s.server.uid is defined %}
+  ownerReferences:
+  - apiVersion: v1
+    controller: false
+    blockOwnerDeletion: false
+    kind: Pod
+    name: {{zeppelin.k8s.server.pod.name}}
+    uid: {{zeppelin.k8s.server.uid}}
+  {% endif %}
+spec:
+  serviceAccountName: zeppelin-server
+  {% if zeppelin.k8s.interpreter.group.name == "spark" %}
+  automountServiceAccountToken: true
+  {% else %}
+  automountServiceAccountToken: false
+  {% endif %}
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 30
+  volumes:
+  - name: ivy-cache
+    persistentVolumeClaim:
+      claimName: zeppelin-ivy-cache-pvc
+  - name: spark-local
+    emptyDir:
+      sizeLimit: 10Gi
+  - name: spark-checkpoints
+    nfs:
+      server: 10.10.0.10
+      path: /volume1/spark-checkpoints
+  - name: spark-conf
+    configMap:
+      name: spark-conf
+  containers:
+  - name: {{zeppelin.k8s.interpreter.container.name}}
+    image: {{zeppelin.k8s.interpreter.container.image}}
+    {% if zeppelin.k8s.interpreter.container.imagePullPolicy is defined %}
+    imagePullPolicy: {{zeppelin.k8s.interpreter.container.imagePullPolicy}}
+    {% endif %}
+    volumeMounts:
+    - name: ivy-cache
+      mountPath: /home/zeppelin/.ivy2
+    - name: spark-local
+      mountPath: /tmp/spark-local
+    - name: spark-checkpoints
+      mountPath: /mnt/spark-checkpoints
+    - name: spark-conf
+      mountPath: /opt/spark/conf
+      readOnly: true
+    args:
+      - "$(ZEPPELIN_HOME)/bin/interpreter.sh"
+      - "-d"
+      - "$(ZEPPELIN_HOME)/interpreter/{{zeppelin.k8s.interpreter.group.name}}"
+      - "-r"
+      - "{{zeppelin.k8s.interpreter.rpc.portRange}}"
+      - "-c"
+      - "{{zeppelin.k8s.server.rpc.service}}"
+      - "-p"
+      - "{{zeppelin.k8s.server.rpc.portRange}}"
+      - "-i"
+      - "{{zeppelin.k8s.interpreter.group.id}}"
+      - "-l"
+      - "{{zeppelin.k8s.interpreter.localRepo}}/{{zeppelin.k8s.interpreter.setting.name}}"
+      - "-g"
+      - "{{zeppelin.k8s.interpreter.setting.name}}"
+    env:
+  {% for key, value in zeppelin.k8s.envs.items() %}
+    - name: {{key}}
+      value: {{value}}
+  {% endfor %}
+  {% if zeppelin.k8s.interpreter.cores is defined and zeppelin.k8s.interpreter.memory is defined %}
+    resources:
+      requests:
+        memory: "{{zeppelin.k8s.interpreter.memory}}"
+        cpu: "{{zeppelin.k8s.interpreter.cores}}"
+      limits:
+        cpu: "{{zeppelin.k8s.interpreter.cores}}"
+        {% if zeppelin.k8s.interpreter.gpu.type is defined and zeppelin.k8s.interpreter.gpu.nums is defined %}
+        {{zeppelin.k8s.interpreter.gpu.type}}: "{{zeppelin.k8s.interpreter.gpu.nums}}"
+        {% endif %}
+  {% else %}
+  {% if zeppelin.k8s.interpreter.gpu.type is defined and zeppelin.k8s.interpreter.gpu.nums is defined %}
+    resources:
+      limits:
+        {{zeppelin.k8s.interpreter.gpu.type}}: "{{zeppelin.k8s.interpreter.gpu.nums}}"
+  {% endif %}
+  {% endif %}
+  {% if zeppelin.k8s.interpreter.imagePullSecrets is defined %}
+  imagePullSecrets:
+  {% for secret in zeppelin.k8s.interpreter.imagePullSecrets.split(',') %}
+  - name: {{secret}}
+  {% endfor %}
+  {% endif %}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: {{zeppelin.k8s.interpreter.namespace}}
+  name: {{zeppelin.k8s.interpreter.pod.name}}
+  {% if zeppelin.k8s.server.uid is defined %}
+  ownerReferences:
+  - apiVersion: v1
+    controller: false
+    blockOwnerDeletion: false
+    kind: Pod
+    name: {{zeppelin.k8s.server.pod.name}}
+    uid: {{zeppelin.k8s.server.uid}}
+  {% endif %}
+spec:
+  clusterIP: None
+  ports:
+    - name: intp
+      port: 12321
+    {% if zeppelin.k8s.interpreter.group.name == "spark" %}
+    - name: spark-driver
+      port: 22321
+    - name: spark-blockmanager
+      port: 22322
+    - name: spark-ui
+      port: 4040
+    {% endif %}
+  selector:
+    app: {{zeppelin.k8s.interpreter.pod.name}}
+{% if zeppelin.k8s.interpreter.group.name == "spark" %}
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{zeppelin.k8s.interpreter.pod.name}}
+  namespace: {{zeppelin.k8s.interpreter.namespace}}
+  {% if zeppelin.k8s.server.uid is defined %}
+  ownerReferences:
+  - apiVersion: v1
+    controller: false
+    blockOwnerDeletion: false
+    kind: Pod
+    name: {{zeppelin.k8s.server.pod.name}}
+    uid: {{zeppelin.k8s.server.uid}}
+  {% endif %}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["create", "get", "update", "list", "delete", "watch" ]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{zeppelin.k8s.interpreter.pod.name}}
+  namespace: {{zeppelin.k8s.interpreter.namespace}}
+  {% if zeppelin.k8s.server.uid is defined %}
+  ownerReferences:
+  - apiVersion: v1
+    controller: false
+    blockOwnerDeletion: false
+    kind: Pod
+    name: {{zeppelin.k8s.server.pod.name}}
+    uid: {{zeppelin.k8s.server.uid}}
+  {% endif %}
+subjects:
+- kind: ServiceAccount
+  name: zeppelin-server
+roleRef:
+  kind: Role
+  name: {{zeppelin.k8s.interpreter.pod.name}}
+  apiGroup: rbac.authorization.k8s.io
+{% endif %}
