@@ -15,7 +15,7 @@
 # │ NFS 10.10.0.10:/volume1/spark-checkpoints │ /mnt/spark-checkpoints │
 # └─────────────────────────────────┴─────────────────────────────────┘
 
-ARG REGISTRY=localhost:32000
+ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 FROM ${REGISTRY}/electinfo/spark-base:latest
 
 USER spark

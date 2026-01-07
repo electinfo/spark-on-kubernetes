@@ -121,11 +121,14 @@ spec:
 
         # Create buildkitd config for insecure registry
         mkdir -p /tmp/buildkit
-        cat > /tmp/buildkit/buildkitd.toml << 'TOML'
+        cat > /tmp/buildkit/buildkitd.toml <<-'EOF'
         [registry."registry.container-registry.svc.cluster.local:5000"]
           http = true
           insecure = true
-        TOML
+        EOF
+
+        # Remove any existing builder to ensure fresh config
+        docker buildx rm k8s-builder 2>/dev/null || true
 
         # Create a kubernetes driver builder - this supports cross-target refs
         # and runs BuildKit pods in the cluster
@@ -135,15 +138,26 @@ spec:
           --driver-opt namespace=tekton-pipelines \
           --driver-opt replicas=1 \
           --config /tmp/buildkit/buildkitd.toml \
-          --use || docker buildx use k8s-builder
+          --use
 
         docker buildx inspect --bootstrap
 
-        # Run docker buildx bake with parameters
-        docker buildx bake \
-          --file docker-bake.hcl \
-          --push \
-          $(params.targets)
+        # Build targets - spark-base must be built first and pushed
+        # before dependent images can be built
+        TARGETS="$(params.targets)"
+
+        if [ "$TARGETS" = "default" ]; then
+          echo "=== Building spark-base first ==="
+          docker buildx bake --file docker-bake.hcl --push spark-base
+
+          echo "=== Building spark-images (executor, driver, connect-server) ==="
+          docker buildx bake --file docker-bake.hcl --push spark-images
+
+          echo "=== Building zeppelin-images (server, interpreter) ==="
+          docker buildx bake --file docker-bake.hcl --push zeppelin-images
+        else
+          docker buildx bake --file docker-bake.hcl --push $TARGETS
+        fi
 
         echo "Build complete!"
       volumeMounts:

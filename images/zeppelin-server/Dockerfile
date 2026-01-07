@@ -20,7 +20,7 @@
 # │ ConfigMap zeppelin-interpreter-spec     │ /opt/zeppelin/k8s/interpreter   │
 # └─────────────────────────────────────────┴─────────────────────────────────┘
 
-ARG REGISTRY=localhost:32000
+ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 
 # Stage 1: Get Spark from spark-base
 FROM ${REGISTRY}/electinfo/spark-base:latest AS spark

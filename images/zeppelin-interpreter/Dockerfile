@@ -20,7 +20,7 @@
 # │ ConfigMap spark-conf                    │ /opt/spark/conf                 │
 # └─────────────────────────────────────────┴─────────────────────────────────┘
 
-ARG REGISTRY=localhost:32000
+ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 FROM ${REGISTRY}/electinfo/spark-base:latest
 
 USER root
