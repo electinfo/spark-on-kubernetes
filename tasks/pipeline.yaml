@@ -142,22 +142,12 @@ spec:
 
         docker buildx inspect --bootstrap
 
-        # Build targets - spark-base must be built first and pushed
-        # before dependent images can be built
+        # Build all targets with a single bake command
+        # REGISTRY is fixed in Dockerfiles, so cross-target refs work
         TARGETS="$(params.targets)"
 
-        if [ "$TARGETS" = "default" ]; then
-          echo "=== Building spark-base first ==="
-          docker buildx bake --file docker-bake.hcl --push spark-base
-
-          echo "=== Building spark-images (executor, driver, connect-server) ==="
-          docker buildx bake --file docker-bake.hcl --push spark-images
-
-          echo "=== Building zeppelin-images (server, interpreter) ==="
-          docker buildx bake --file docker-bake.hcl --push zeppelin-images
-        else
-          docker buildx bake --file docker-bake.hcl --push $TARGETS
-        fi
+        echo "=== Building targets: $TARGETS ==="
+        docker buildx bake --file docker-bake.hcl --push $TARGETS
 
         echo "Build complete!"
       volumeMounts:
