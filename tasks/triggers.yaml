@@ -1,0 +1,119 @@
+---
+# TriggerBinding extracts params from GitHub webhook payload
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: spark-images-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+    - name: revision
+      value: $(body.after)
+    - name: repo-url
+      value: $(body.repository.clone_url)
+---
+# TriggerTemplate creates PipelineRun for spark-images-build
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: spark-images-template
+  namespace: tekton-pipelines
+spec:
+  params:
+    - name: revision
+      default: main
+    - name: repo-url
+      default: https://github.com/electinfo/spark-on-kubernetes.git
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: spark-images-build-
+      spec:
+        pipelineRef:
+          name: spark-images-build
+        taskRunTemplate:
+          serviceAccountName: spark-images-build-sa
+        params:
+          - name: git-url
+            value: $(tt.params.repo-url)
+          - name: git-revision
+            value: $(tt.params.revision)
+        workspaces:
+          - name: shared-workspace
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 2Gi
+---
+# EventListener for spark-on-kubernetes repo webhooks
+# Accessible at spark.webhook.elect.info
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: spark-images-listener
+  namespace: tekton-pipelines
+spec:
+  serviceAccountName: spark-images-trigger-sa
+  triggers:
+    - name: spark-images-push
+      interceptors:
+        - ref:
+            name: github
+          params:
+            - name: eventTypes
+              value: ["push"]
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: "body.ref == 'refs/heads/main' && body.repository.name == 'spark-on-kubernetes'"
+      bindings:
+        - ref: spark-images-binding
+      template:
+        ref: spark-images-template
+---
+# Service account for running pipeline tasks
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark-images-build-sa
+  namespace: tekton-pipelines
+---
+# Service account for trigger event listener
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark-images-trigger-sa
+  namespace: tekton-pipelines
+---
+# Trigger SA needs to create PipelineRuns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark-images-trigger-binding
+  namespace: tekton-pipelines
+subjects:
+  - kind: ServiceAccount
+    name: spark-images-trigger-sa
+    namespace: tekton-pipelines
+roleRef:
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: spark-images-trigger-clusterbinding
+subjects:
+  - kind: ServiceAccount
+    name: spark-images-trigger-sa
+    namespace: tekton-pipelines
+roleRef:
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+  apiGroup: rbac.authorization.k8s.io

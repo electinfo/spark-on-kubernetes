@@ -3,4 +3,6 @@ kind: Kustomization
 
 resources:
   - pipeline.yaml
+  - triggers.yaml
+  - ingress-routes.yaml
   # pipelinerun.yaml uses generateName, use: kubectl create -f pipelinerun.yaml
