@@ -35,7 +35,7 @@ spec:
         kubernetes.io/hostname: cyberpower
       containers:
         - name: spark-connect
-          image: localhost:32000/electinfo/spark-connect:latest
+          image: localhost:32000/electinfo/spark-connect-server:latest
           imagePullPolicy: Always
           command:
             - /bin/bash
@@ -54,7 +54,7 @@ spec:
                 --conf spark.jars.packages=org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.2_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0 \
                 --conf spark.jars.ivy=/nonexistent/.ivy2.5.2 \
                 --conf spark.driver.host=$POD_IP \
-                --conf spark.kubernetes.container.image=localhost:32000/electinfo/spark-connect:latest \
+                --conf spark.kubernetes.container.image=localhost:32000/electinfo/spark-executor:latest \
                 --conf spark.kubernetes.namespace=spark \
                 --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark-operator-spark \
                 --conf spark.executor.instances=5 \

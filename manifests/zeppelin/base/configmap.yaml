@@ -8,11 +8,11 @@ data:
   # Wildcard subdomain *.zeppelin.elect.info should point to the same address
   SERVICE_DOMAIN: zeppelin.elect.info
 
-  # Spark container image for executors - uses spark-connect image (based on official Spark)
-  ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: localhost:32000/electinfo/spark-connect:latest
+  # Spark container image for executors
+  ZEPPELIN_K8S_SPARK_CONTAINER_IMAGE: localhost:32000/electinfo/spark-executor:latest
 
-  # Zeppelin interpreter image - uses localhost:32000 NodePort (insecure registry)
-  ZEPPELIN_K8S_CONTAINER_IMAGE: localhost:32000/electinfo/zeppelin:latest
+  # Zeppelin interpreter image (Spark driver pods)
+  ZEPPELIN_K8S_CONTAINER_IMAGE: localhost:32000/electinfo/zeppelin-interpreter:latest
 
   # Zeppelin installation path
   ZEPPELIN_HOME: /opt/zeppelin

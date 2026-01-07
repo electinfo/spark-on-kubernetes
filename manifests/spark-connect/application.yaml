@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/electinfo/ops.git'
-    path: 'app-spark-connect/base'
+    repoURL: 'https://github.com/electinfo/spark-on-kubernetes.git'
+    path: 'manifests/spark-connect/base'
     targetRevision: main
   destination:
     namespace: spark

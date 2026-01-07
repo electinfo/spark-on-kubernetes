@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/electinfo/ops
-    targetRevision: HEAD
-    path: app-zeppelin/base
+    repoURL: https://github.com/electinfo/spark-on-kubernetes
+    targetRevision: main
+    path: manifests/zeppelin/base
   destination:
     server: https://kubernetes.default.svc
     namespace: zeppelin

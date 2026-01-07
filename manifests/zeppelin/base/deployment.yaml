@@ -93,7 +93,7 @@ spec:
               readOnly: true
       containers:
         - name: zeppelin-server
-          image: localhost:32000/electinfo/zeppelin:latest
+          image: localhost:32000/electinfo/zeppelin-server:latest
           imagePullPolicy: Always
           command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
           lifecycle:
