@@ -28,15 +28,12 @@ spec:
   tasks:
     - name: fetch-source
       taskRef:
-        name: git-clone
-        kind: ClusterTask
+        name: electinfo-git-clone
       params:
-        - name: url
+        - name: repo-url
           value: $(params.git-url)
         - name: revision
           value: $(params.git-revision)
-        - name: deleteExisting
-          value: "true"
       workspaces:
         - name: output
           workspace: shared-workspace

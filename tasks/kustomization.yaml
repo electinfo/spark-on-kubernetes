@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
   - pipeline.yaml
-  - pipelinerun.yaml
+  # pipelinerun.yaml uses generateName, use: kubectl create -f pipelinerun.yaml
