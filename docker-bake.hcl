@@ -4,7 +4,7 @@
 // Build order: spark-base first, then all others (they depend on it)
 
 variable "REGISTRY" {
-  default = "localhost:32000"
+  default = "registry.container-registry.svc.cluster.local:5000"
 }
 
 variable "TAG" {

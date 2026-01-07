@@ -15,7 +15,7 @@ spec:
       default: "main"
     - name: registry
       type: string
-      default: "localhost:32000"
+      default: "registry.container-registry.svc.cluster.local:5000"
     - name: tag
       type: string
       default: "latest"
@@ -64,7 +64,7 @@ spec:
   params:
     - name: registry
       type: string
-      default: "localhost:32000"
+      default: "registry.container-registry.svc.cluster.local:5000"
     - name: tag
       type: string
       default: "latest"
@@ -79,31 +79,30 @@ spec:
   sidecars:
     - name: docker
       image: $(params.dind-image)
+      args:
+        - "--tls=false"
+        - "--insecure-registry=registry.container-registry.svc.cluster.local:5000"
       securityContext:
         privileged: true
       env:
         - name: DOCKER_TLS_CERTDIR
-          value: /certs
+          value: ""
       volumeMounts:
-        - name: dind-certs
-          mountPath: /certs/client
+        - name: docker-socket
+          mountPath: /var/run
         - name: dind-storage
           mountPath: /var/lib/docker
       readinessProbe:
         periodSeconds: 1
         exec:
-          command: ["ls", "/certs/client/ca.pem"]
+          command: ["docker", "info"]
   steps:
     - name: bake
       image: docker:27-cli
       workingDir: $(workspaces.source.path)
       env:
         - name: DOCKER_HOST
-          value: tcp://localhost:2376
-        - name: DOCKER_TLS_VERIFY
-          value: "1"
-        - name: DOCKER_CERT_PATH
-          value: /certs/client
+          value: unix:///var/run/docker.sock
         - name: DOCKER_BUILDKIT
           value: "1"
       script: |
@@ -116,26 +115,27 @@ spec:
           sleep 1
         done
 
-        # Create and use buildx builder
-        docker buildx create --name builder --driver docker-container --use
-        docker buildx inspect --bootstrap
+        # Use default builder (no docker-container driver needed)
+        docker buildx use default
+
+        # Export variables for docker-bake.hcl
+        export REGISTRY="$(params.registry)"
+        export TAG="$(params.tag)"
+
+        # Note: insecure-registries must be configured on the DinD sidecar, not the client
 
         # Run docker buildx bake with parameters
         docker buildx bake \
           --file docker-bake.hcl \
-          --set "*.args.REGISTRY=$(params.registry)" \
-          --set "REGISTRY=$(params.registry)" \
-          --set "TAG=$(params.tag)" \
           --push \
           $(params.targets)
 
         echo "Build complete!"
       volumeMounts:
-        - name: dind-certs
-          mountPath: /certs/client
-          readOnly: true
+        - name: docker-socket
+          mountPath: /var/run
   volumes:
-    - name: dind-certs
+    - name: docker-socket
       emptyDir: {}
     - name: dind-storage
       emptyDir: {}
