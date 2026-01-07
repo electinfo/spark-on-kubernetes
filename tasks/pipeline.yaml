@@ -38,9 +38,18 @@ spec:
         - name: source
           workspace: shared-workspace
 
-    - name: build-images
+    - name: get-old-digests
       runAfter:
         - fetch-source
+      taskRef:
+        name: spark-images-get-digests
+      params:
+        - name: registry
+          value: $(params.registry)
+
+    - name: build-images
+      runAfter:
+        - get-old-digests
       taskRef:
         name: docker-buildx-bake
       params:
@@ -50,9 +59,81 @@ spec:
           value: $(params.tag)
         - name: targets
           value: $(params.targets)
+        - name: old-spark-connect-digest
+          value: $(tasks.get-old-digests.results.spark-connect-server-digest)
+        - name: old-zeppelin-server-digest
+          value: $(tasks.get-old-digests.results.zeppelin-server-digest)
       workspaces:
         - name: source
           workspace: shared-workspace
+
+    - name: restart-spark-connect
+      runAfter:
+        - build-images
+      when:
+        - input: $(tasks.build-images.results.spark-connect-changed)
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: electinfo-restart-sparkapplication
+      params:
+        - name: sparkapplication-name
+          value: spark-connect-server
+        - name: namespace
+          value: spark
+
+    - name: restart-zeppelin
+      runAfter:
+        - build-images
+      when:
+        - input: $(tasks.build-images.results.zeppelin-server-changed)
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: electinfo-restart-deployment
+      params:
+        - name: deployment-name
+          value: zeppelin-server
+        - name: namespace
+          value: zeppelin
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: spark-images-get-digests
+  namespace: tekton-pipelines
+spec:
+  description: Get current image digests before building
+  params:
+    - name: registry
+      type: string
+      default: "registry.container-registry.svc.cluster.local:5000"
+  results:
+    - name: spark-connect-server-digest
+      description: Current digest of spark-connect-server image
+    - name: zeppelin-server-digest
+      description: Current digest of zeppelin-server image
+  steps:
+    - name: get-digests
+      image: gcr.io/go-containerregistry/crane:debug
+      script: |
+        #!/busybox/sh
+        set -e
+        REGISTRY="$(params.registry)"
+
+        echo "Getting current digests..."
+
+        # spark-connect-server
+        DIGEST=$(crane digest "$REGISTRY/electinfo/spark-connect-server:latest" --insecure 2>/dev/null || echo "none")
+        echo "spark-connect-server: $DIGEST"
+        echo -n "$DIGEST" > $(results.spark-connect-server-digest.path)
+
+        # zeppelin-server
+        DIGEST=$(crane digest "$REGISTRY/electinfo/zeppelin-server:latest" --insecure 2>/dev/null || echo "none")
+        echo "zeppelin-server: $DIGEST"
+        echo -n "$DIGEST" > $(results.zeppelin-server-digest.path)
+
+        echo "Done getting digests"
 ---
 apiVersion: tekton.dev/v1
 kind: Task
@@ -74,6 +155,17 @@ spec:
     - name: dind-image
       type: string
       default: "docker:27-dind"
+    - name: old-spark-connect-digest
+      type: string
+      default: "none"
+    - name: old-zeppelin-server-digest
+      type: string
+      default: "none"
+  results:
+    - name: spark-connect-changed
+      description: Whether spark-connect-server image changed (true or false)
+    - name: zeppelin-server-changed
+      description: Whether zeppelin-server image changed (true or false)
   workspaces:
     - name: source
   sidecars:
@@ -130,8 +222,7 @@ spec:
         # Remove any existing builder to ensure fresh config
         docker buildx rm k8s-builder 2>/dev/null || true
 
-        # Create a kubernetes driver builder - this supports cross-target refs
-        # and runs BuildKit pods in the cluster
+        # Create a kubernetes driver builder
         docker buildx create \
           --name k8s-builder \
           --driver kubernetes \
@@ -143,9 +234,7 @@ spec:
         docker buildx inspect --bootstrap
 
         # Build all targets with a single bake command
-        # REGISTRY is fixed in Dockerfiles, so cross-target refs work
         TARGETS="$(params.targets)"
-
         echo "=== Building targets: $TARGETS ==="
         docker buildx bake --file docker-bake.hcl --push $TARGETS
 
@@ -153,6 +242,36 @@ spec:
       volumeMounts:
         - name: docker-socket
           mountPath: /var/run
+    - name: check-changes
+      image: gcr.io/go-containerregistry/crane:debug
+      script: |
+        #!/busybox/sh
+        set -e
+        REGISTRY="$(params.registry)"
+
+        echo "Checking for image changes..."
+
+        # spark-connect-server
+        OLD="$(params.old-spark-connect-digest)"
+        NEW=$(crane digest "$REGISTRY/electinfo/spark-connect-server:latest" --insecure 2>/dev/null || echo "error")
+        echo "spark-connect-server: old=$OLD new=$NEW"
+        if [ "$OLD" = "$NEW" ]; then
+          echo -n "false" > $(results.spark-connect-changed.path)
+        else
+          echo -n "true" > $(results.spark-connect-changed.path)
+        fi
+
+        # zeppelin-server
+        OLD="$(params.old-zeppelin-server-digest)"
+        NEW=$(crane digest "$REGISTRY/electinfo/zeppelin-server:latest" --insecure 2>/dev/null || echo "error")
+        echo "zeppelin-server: old=$OLD new=$NEW"
+        if [ "$OLD" = "$NEW" ]; then
+          echo -n "false" > $(results.zeppelin-server-changed.path)
+        else
+          echo -n "true" > $(results.zeppelin-server-changed.path)
+        fi
+
+        echo "Done checking changes"
   volumes:
     - name: docker-socket
       emptyDir: {}
