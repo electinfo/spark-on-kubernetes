@@ -35,7 +35,7 @@ spec:
         - name: revision
           value: $(params.git-revision)
       workspaces:
-        - name: output
+        - name: source
           workspace: shared-workspace
 
     - name: build-images
@@ -60,7 +60,7 @@ metadata:
   name: docker-buildx-bake
   namespace: tekton-pipelines
 spec:
-  description: Build Docker images using docker buildx bake
+  description: Build Docker images using docker buildx bake with DinD sidecar
   params:
     - name: registry
       type: string
@@ -71,43 +71,71 @@ spec:
     - name: targets
       type: string
       default: "default"
+    - name: dind-image
+      type: string
+      default: "docker:27-dind"
   workspaces:
     - name: source
-  steps:
-    - name: bake
-      image: docker:24-dind
+  sidecars:
+    - name: docker
+      image: $(params.dind-image)
       securityContext:
         privileged: true
+      env:
+        - name: DOCKER_TLS_CERTDIR
+          value: /certs
+      volumeMounts:
+        - name: dind-certs
+          mountPath: /certs/client
+        - name: dind-storage
+          mountPath: /var/lib/docker
+      readinessProbe:
+        periodSeconds: 1
+        exec:
+          command: ["ls", "/certs/client/ca.pem"]
+  steps:
+    - name: bake
+      image: docker:27-cli
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2376
+        - name: DOCKER_TLS_VERIFY
+          value: "1"
+        - name: DOCKER_CERT_PATH
+          value: /certs/client
+        - name: DOCKER_BUILDKIT
+          value: "1"
       script: |
         #!/bin/sh
         set -ex
 
-        # Start Docker daemon
-        dockerd &
-        sleep 5
-
-        # Wait for Docker to be ready
+        # Wait for docker daemon
+        echo "Waiting for Docker daemon..."
         until docker info; do
-          echo "Waiting for Docker..."
-          sleep 2
+          sleep 1
         done
 
-        # Create buildx builder
-        docker buildx create --name builder --use
+        # Create and use buildx builder
+        docker buildx create --name builder --driver docker-container --use
         docker buildx inspect --bootstrap
-
-        cd $(workspaces.source.path)
 
         # Run docker buildx bake with parameters
         docker buildx bake \
-          --set "*.platform=linux/amd64" \
+          --file docker-bake.hcl \
+          --set "*.args.REGISTRY=$(params.registry)" \
           --set "REGISTRY=$(params.registry)" \
           --set "TAG=$(params.tag)" \
           --push \
           $(params.targets)
+
+        echo "Build complete!"
       volumeMounts:
-        - name: docker-socket
-          mountPath: /var/run/docker.sock
+        - name: dind-certs
+          mountPath: /certs/client
+          readOnly: true
   volumes:
-    - name: docker-socket
+    - name: dind-certs
+      emptyDir: {}
+    - name: dind-storage
       emptyDir: {}
