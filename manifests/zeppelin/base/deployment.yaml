@@ -53,6 +53,10 @@ spec:
           nfs:
             server: 10.10.0.10
             path: /volume1/spark-checkpoints
+        # Interpreter settings from ConfigMap
+        - name: interpreter-setting
+          configMap:
+            name: zeppelin-interpreter-setting
       initContainers:
         - name: git-clone
           image: alpine/git:latest
@@ -128,6 +132,10 @@ spec:
               mountPath: /opt/zeppelin/notebook
             - name: zeppelin-conf
               mountPath: /opt/zeppelin/conf
+            - name: interpreter-setting
+              mountPath: /opt/zeppelin/conf/interpreter-setting.json
+              subPath: interpreter-setting.json
+              readOnly: true
             - name: github-ssh-key
               mountPath: /home/zeppelin/.ssh/id_ed25519
               subPath: deploy-key

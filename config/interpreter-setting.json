@@ -1,0 +1,22 @@
+{
+  "spark": {
+    "properties": {
+      "spark.remote": {
+        "propertyName": "spark.remote",
+        "defaultValue": "sc://spark-connect.spark.svc:15002",
+        "description": "Spark Connect server URL"
+      },
+      "SPARK_HOME": {
+        "envName": "SPARK_HOME",
+        "propertyName": "SPARK_HOME",
+        "defaultValue": "/opt/spark",
+        "description": "Spark installation directory"
+      },
+      "zeppelin.spark.enableSupportedVersionCheck": {
+        "propertyName": "zeppelin.spark.enableSupportedVersionCheck",
+        "defaultValue": "false",
+        "description": "Disable Spark version check"
+      }
+    }
+  }
+}
