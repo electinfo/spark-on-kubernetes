@@ -85,8 +85,4 @@ COPY --from=spark /opt/spark /opt/spark
 ENV SPARK_HOME=/opt/spark
 ENV PATH="${SPARK_HOME}/bin:${PATH}"
 
-# Copy interpreter settings for Spark Connect mode
-COPY config/interpreter-setting.json /opt/zeppelin/conf/interpreter-setting.json
-RUN chown 1000:1000 /opt/zeppelin/conf/interpreter-setting.json
-
 USER 1000
