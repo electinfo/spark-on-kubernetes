@@ -39,11 +39,9 @@ spec:
         - name: zeppelin-notebook
           persistentVolumeClaim:
             claimName: zeppelin-notebook-pvc
-        - name: zeppelin-conf-src
+        - name: zeppelin-conf
           configMap:
             name: zeppelin-conf
-        - name: zeppelin-conf
-          emptyDir: {}
         - name: github-ssh-key
           secret:
             secretName: zeppelin-github-secret
@@ -60,19 +58,6 @@ spec:
           configMap:
             name: zeppelin-interpreter-spec
       initContainers:
-        - name: copy-conf
-          image: busybox:latest
-          command: ["sh", "-c"]
-          args:
-            - |
-              cp /conf-src/interpreter.json /conf/interpreter.json
-              chown 1000:1000 /conf/interpreter.json
-          volumeMounts:
-            - name: zeppelin-conf-src
-              mountPath: /conf-src
-              readOnly: true
-            - name: zeppelin-conf
-              mountPath: /conf
         - name: git-clone
           image: alpine/git:latest
           command: ["/bin/sh", "-c"]
@@ -146,7 +131,8 @@ spec:
             - name: zeppelin-notebook
               mountPath: /opt/zeppelin/notebook
             - name: zeppelin-conf
-              mountPath: /opt/zeppelin/conf
+              mountPath: /opt/zeppelin/conf/interpreter.json
+              subPath: interpreter.json
             - name: github-ssh-key
               mountPath: /home/zeppelin/.ssh/id_ed25519
               subPath: deploy-key
