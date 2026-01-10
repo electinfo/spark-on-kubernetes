@@ -57,7 +57,7 @@ spec:
     {% endif %}
     volumeMounts:
     - name: ivy-cache
-      mountPath: /home/zeppelin/.ivy2
+      mountPath: /nonexistent/.ivy2.5.2
     - name: spark-local
       mountPath: /tmp/spark-local
     - name: spark-checkpoints
