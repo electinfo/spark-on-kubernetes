@@ -68,7 +68,7 @@ spec:
                 --conf spark.sql.warehouse.dir=s3a://electinfo/hive-warehouse \
                 --conf spark.eventLog.enabled=true \
                 --conf spark.eventLog.dir=s3a://spark-history/ \
-                --conf spark.checkpoint.dir=s3a://electinfo/spark-checkpoints/ \
+                --conf spark.checkpoint.dir=s3a://spark-checkpoints/ \
                 --conf spark.dynamicAllocation.enabled=false \
                 --conf spark.dynamicAllocation.minExecutors=1 \
                 --conf spark.dynamicAllocation.maxExecutors=1 \
