@@ -55,6 +55,10 @@ spec:
           nfs:
             server: 10.10.0.10
             path: /volume1/spark-checkpoints
+        # Interpreter pod spec template for K8s spawned interpreter pods
+        - name: zeppelin-interpreter-spec
+          configMap:
+            name: zeppelin-interpreter-spec
       initContainers:
         - name: copy-conf
           image: busybox:latest
@@ -149,6 +153,9 @@ spec:
               readOnly: true
             - name: spark-checkpoints
               mountPath: /mnt/spark-checkpoints
+            - name: zeppelin-interpreter-spec
+              mountPath: /opt/zeppelin/k8s/interpreter
+              readOnly: true
           resources:
             limits:
               memory: "4Gi"
