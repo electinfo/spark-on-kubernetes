@@ -1,5 +1,6 @@
 {
   "spark": {
+    "zeppelin.spark.enableSupportedVersionCheck": "false",
     "spark.master": "k8s://https://kubernetes.default.svc:443",
     "spark.submit.deployMode": "client",
     "spark.kubernetes.namespace": "zeppelin",
