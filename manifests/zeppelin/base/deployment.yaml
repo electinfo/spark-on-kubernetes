@@ -131,8 +131,8 @@ spec:
             - name: zeppelin-notebook
               mountPath: /opt/zeppelin/notebook
             - name: zeppelin-conf
-              mountPath: /opt/zeppelin/conf/interpreter.json
-              subPath: interpreter.json
+              mountPath: /opt/zeppelin/conf/interpreter-settings.json
+              subPath: interpreter-settings.json
             - name: github-ssh-key
               mountPath: /home/zeppelin/.ssh/id_ed25519
               subPath: deploy-key

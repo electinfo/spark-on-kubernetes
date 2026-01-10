@@ -18,7 +18,7 @@ configMapGenerator:
       - 100-interpreter-spec.yaml
   - name: zeppelin-conf
     files:
-      - interpreter.json
+      - interpreter-settings.json
       - log4j.properties
 
 generatorOptions:

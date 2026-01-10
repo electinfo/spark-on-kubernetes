@@ -1,0 +1,18 @@
+{
+  "spark": {
+    "spark.master": "k8s://https://kubernetes.default.svc:443",
+    "spark.submit.deployMode": "client",
+    "spark.kubernetes.namespace": "zeppelin",
+    "spark.kubernetes.authenticate.driver.serviceAccountName": "zeppelin-server",
+    "spark.kubernetes.container.image": "localhost:32000/electinfo/spark-executor:latest",
+    "spark.kubernetes.executor.podTemplateFile": "/opt/spark/conf/executor-pod-template.yaml",
+    "spark.driver.memory": "4g",
+    "spark.executor.memory": "8g",
+    "spark.executor.cores": "4",
+    "spark.executor.instances": "2",
+    "spark.sql.catalogImplementation": "hive",
+    "spark.hadoop.hive.metastore.uris": "thrift://app-hive.electinfo.svc.cluster.local:9083",
+    "spark.sql.warehouse.dir": "s3a://electinfo/hive-warehouse",
+    "spark.jars.packages": "org.apache.hadoop:hadoop-aws:3.4.2,io.graphframes:graphframes-spark4_2.13:0.10.0"
+  }
+}
