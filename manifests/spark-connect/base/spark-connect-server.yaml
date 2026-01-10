@@ -44,45 +44,13 @@ spec:
               # Create Ivy cache directory (spark user home is /nonexistent in /etc/passwd)
               mkdir -p /nonexistent/.ivy2.5.2/cache /nonexistent/.ivy2.5.2/jars
 
-              # Start Spark Connect server with S3A support for asustor
+              # Start Spark Connect server using properties file
               exec /opt/spark/sbin/start-connect-server.sh \
                 --master k8s://https://kubernetes.default.svc:443 \
                 --deploy-mode client \
                 --name spark-connect-server \
-                --conf spark.ui.prometheus.enabled=true \
-                --conf spark.metrics.conf=/opt/spark/conf/metrics.properties \
-                --conf spark.jars.packages=org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.2_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0 \
-                --conf spark.jars.ivy=/nonexistent/.ivy2.5.2 \
-                --conf spark.driver.host=$POD_IP \
-                --conf spark.kubernetes.container.image=localhost:32000/electinfo/spark-executor:latest \
-                --conf spark.kubernetes.namespace=spark \
-                --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark-operator-spark \
-                --conf spark.executor.instances=5 \
-                --conf spark.executor.cores=8 \
-                --conf spark.executor.memory=24g \
-                --conf spark.driver.memory=8g \
-                --conf spark.hadoop.hive.metastore.uris=thrift://app-hive.electinfo.svc.cluster.local:9083 \
-                --conf spark.sql.catalogImplementation=hive \
-                --conf spark.sql.hive.metastore.version=4.1.0 \
-                --conf spark.sql.hive.metastore.jars=maven \
-                --conf spark.sql.warehouse.dir=s3a://electinfo/hive-warehouse \
-                --conf spark.eventLog.enabled=true \
-                --conf spark.eventLog.dir=s3a://spark-history/ \
-                --conf spark.dynamicAllocation.enabled=false \
-                --conf spark.dynamicAllocation.minExecutors=1 \
-                --conf spark.dynamicAllocation.maxExecutors=1 \
-                --conf spark.dynamicAllocation.executorIdleTimeout=120s \
-                --conf spark.kubernetes.executor.podTemplateFile=/opt/spark/conf/executor-pod-template.yaml \
-                --conf spark.kubernetes.file.upload.path=/tmp/spark-uploads \
-                --conf spark.hadoop.fs.s3a.buffer.dir=/tmp/spark-local \
-                --conf spark.hadoop.fs.s3a.endpoint=http://10.10.0.10:9000 \
-                --conf spark.hadoop.fs.s3a.path.style.access=true \
-                --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
-                --conf spark.hadoop.fs.s3a.connection.ssl.enabled=false \
-                --conf spark.hadoop.fs.s3a.access.key=electinfo \
-                --conf spark.hadoop.fs.s3a.secret.key=electinfo123 \
-                --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \
-                --conf spark.hadoop.fs.s3a.change.detection.mode=none
+                --properties-file /opt/spark/conf/spark-defaults.conf \
+                --conf spark.driver.host=$POD_IP
           env:
             - name: POD_IP
               valueFrom:
@@ -112,11 +80,7 @@ spec:
               cpu: "8"
           volumeMounts:
             - name: spark-conf
-              mountPath: /opt/spark/conf/executor-pod-template.yaml
-              subPath: executor-pod-template.yaml
-            - name: spark-conf
-              mountPath: /opt/spark/conf/metrics.properties
-              subPath: metrics.properties
+              mountPath: /opt/spark/conf
             - name: ivy-cache
               mountPath: /nonexistent
             - name: spark-local
@@ -137,6 +101,59 @@ metadata:
   name: spark-connect-config
   namespace: spark
 data:
+  spark-defaults.conf: |
+    # Spark Connect Server configuration
+    # All settings loaded via --properties-file
+
+    # Prometheus metrics
+    spark.ui.prometheus.enabled                          true
+    spark.metrics.conf                                   /opt/spark/conf/metrics.properties
+
+    # Maven packages
+    spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.2_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0
+    spark.jars.ivy                                       /nonexistent/.ivy2.5.2
+
+    # Kubernetes settings
+    spark.kubernetes.container.image                     localhost:32000/electinfo/spark-executor:latest
+    spark.kubernetes.namespace                           spark
+    spark.kubernetes.authenticate.driver.serviceAccountName spark-operator-spark
+    spark.kubernetes.executor.podTemplateFile            /opt/spark/conf/executor-pod-template.yaml
+    spark.kubernetes.file.upload.path                    /tmp/spark-uploads
+
+    # Executor settings
+    spark.executor.instances                             5
+    spark.executor.cores                                 8
+    spark.executor.memory                                24g
+    spark.driver.memory                                  8g
+
+    # Dynamic allocation (disabled for stable executor count)
+    spark.dynamicAllocation.enabled                      false
+    spark.dynamicAllocation.minExecutors                 1
+    spark.dynamicAllocation.maxExecutors                 1
+    spark.dynamicAllocation.executorIdleTimeout          120s
+
+    # Hive metastore
+    spark.sql.catalogImplementation                      hive
+    spark.sql.hive.metastore.version                     4.1.0
+    spark.sql.hive.metastore.jars                        maven
+    spark.hadoop.hive.metastore.uris                     thrift://app-hive.electinfo.svc.cluster.local:9083
+    spark.sql.warehouse.dir                              s3a://electinfo/hive-warehouse
+
+    # Event logging
+    spark.eventLog.enabled                               true
+    spark.eventLog.dir                                   s3a://spark-history/
+
+    # S3A configuration for MinIO
+    spark.hadoop.fs.s3a.endpoint                         http://10.10.0.10:9000
+    spark.hadoop.fs.s3a.path.style.access                true
+    spark.hadoop.fs.s3a.impl                             org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.connection.ssl.enabled           false
+    spark.hadoop.fs.s3a.access.key                       electinfo
+    spark.hadoop.fs.s3a.secret.key                       electinfo123
+    spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    spark.hadoop.fs.s3a.change.detection.mode            none
+    spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
+
   metrics.properties: |
     # Enable Prometheus metrics export
     *.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
@@ -145,47 +162,7 @@ data:
     worker.source.jvm.class=org.apache.spark.metrics.source.JvmSource
     driver.source.jvm.class=org.apache.spark.metrics.source.JvmSource
     executor.source.jvm.class=org.apache.spark.metrics.source.JvmSource
-  core-site.xml: |
-    <?xml version="1.0" encoding="UTF-8"?>
-    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-    <configuration>
-      <property>
-        <name>fs.s3a.endpoint</name>
-        <value>http://10.10.0.10:9000</value>
-      </property>
-      <property>
-        <name>fs.s3a.path.style.access</name>
-        <value>true</value>
-      </property>
-      <property>
-        <name>fs.s3a.impl</name>
-        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
-      </property>
-      <property>
-        <name>fs.s3a.connection.ssl.enabled</name>
-        <value>false</value>
-      </property>
-      <property>
-        <name>fs.s3a.access.key</name>
-        <value>electinfo</value>
-      </property>
-      <property>
-        <name>fs.s3a.secret.key</name>
-        <value>electinfo123</value>
-      </property>
-      <property>
-        <name>fs.s3a.aws.credentials.provider</name>
-        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
-      </property>
-      <property>
-        <name>fs.s3a.change.detection.mode</name>
-        <value>none</value>
-      </property>
-      <property>
-        <name>fs.s3a.buffer.dir</name>
-        <value>/tmp/spark-local</value>
-      </property>
-    </configuration>
+
   executor-pod-template.yaml: |
     apiVersion: v1
     kind: Pod
