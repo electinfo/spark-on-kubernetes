@@ -1683,7 +1683,7 @@
       ],
       "dependencies": [],
       "option": {
-        "remote": false,
+        "remote": true,
         "port": -1,
         "isExistingProcess": false,
         "setPermission": false,
