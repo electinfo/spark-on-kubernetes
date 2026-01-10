@@ -12,6 +12,7 @@ configMapGenerator:
       - core-site.xml
       - spark-defaults.conf
       - executor-pod-template.yaml
+      - hive-site.xml
   - name: zeppelin-interpreter-spec
     files:
       - 100-interpreter-spec.yaml
