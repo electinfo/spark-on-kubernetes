@@ -21,18 +21,18 @@
 # └─────────────────────────────────────────┴─────────────────────────────────┘
 
 ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
+
+# Stage 1: Get bin scripts from official Zeppelin image
+FROM apache/zeppelin:0.12.0 AS zeppelin
+
+# Stage 2: Build interpreter image from spark-base
 FROM ${REGISTRY}/electinfo/spark-base:latest
 
 USER root
 
-# Download Zeppelin interpreter JAR for Spark communication
-ENV ZEPPELIN_VERSION=0.12.0
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && \
-    curl -fsSL https://archive.apache.org/dist/zeppelin/zeppelin-${ZEPPELIN_VERSION}/zeppelin-${ZEPPELIN_VERSION}-bin-all.tgz | \
-    tar -xz --strip-components=1 -C /tmp zeppelin-${ZEPPELIN_VERSION}-bin-all/interpreter/spark && \
-    mkdir -p /opt/zeppelin/interpreter/spark && \
-    cp /tmp/interpreter/spark/*.jar /opt/zeppelin/interpreter/spark/ && \
-    rm -rf /tmp/interpreter
+# Copy Zeppelin bin scripts and interpreter JARs from official image
+COPY --from=zeppelin /opt/zeppelin/bin /opt/zeppelin/bin
+COPY --from=zeppelin /opt/zeppelin/interpreter/spark /opt/zeppelin/interpreter/spark
 
 ENV ZEPPELIN_HOME=/opt/zeppelin
 
