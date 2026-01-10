@@ -1293,9 +1293,9 @@
         },
         "spark.master": {
           "name": "spark.master",
-          "value": "local[*]",
+          "value": "",
           "type": "string",
-          "description": "Spark master uri. local | yarn-client | yarn-cluster | spark master address of standalone mode, ex) spark://master_host:7077"
+          "description": "Spark master uri. Leave empty when using spark.remote for Spark Connect mode."
         },
         "spark.submit.deployMode": {
           "name": "spark.submit.deployMode",
@@ -1683,7 +1683,7 @@
       ],
       "dependencies": [],
       "option": {
-        "remote": true,
+        "remote": false,
         "port": -1,
         "isExistingProcess": false,
         "setPermission": false,

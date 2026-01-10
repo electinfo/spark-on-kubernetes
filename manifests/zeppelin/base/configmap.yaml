@@ -20,8 +20,8 @@ data:
   # RPC port range for interpreter communication
   ZEPPELIN_SERVER_RPC_PORTRANGE: "12320:12320"
 
-  # Spark master - Kubernetes native
-  SPARK_MASTER: k8s://https://kubernetes.default.svc
+  # Spark master - empty for Spark Connect mode (uses spark.remote instead)
+  SPARK_MASTER: ""
 
   # Spark home in the container
   SPARK_HOME: /opt/spark
