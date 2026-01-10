@@ -123,3 +123,40 @@ If it contains volume configs, they're being passed from Zeppelin server's inter
 | electinfo/ops | ArgoCD root, cluster manifests |
 | electinfo/zeppelin | Zeppelin notebooks (NOT images/configs) |
 | electinfo/rundeck | Job definitions using Spark |
+
+## Session Notes (2026-01-10)
+
+### Spark Connect Server
+
+The spark-connect-server deployment uses `--properties-file` instead of many `--conf` arguments:
+```bash
+exec /opt/spark/sbin/start-connect-server.sh \
+  --master k8s://https://kubernetes.default.svc:443 \
+  --deploy-mode client \
+  --name spark-connect-server \
+  --properties-file /opt/spark/conf/spark-defaults.conf \
+  --conf spark.driver.host=$POD_IP
+```
+
+Only `spark.driver.host` remains as `--conf` because it uses a runtime environment variable.
+
+### Mistakes to Avoid
+
+- **spark.checkpoint.dir on server startup**: Setting `spark.checkpoint.dir` in server config causes startup failure because Spark creates a UUID subdirectory and tries to verify it exists before creating it. Clients should set checkpoint directories per-job instead.
+
+- **Wrong S3 bucket path**: The checkpoint bucket is `s3a://spark-checkpoints/` not `s3a://electinfo/spark-checkpoints/`
+
+### Useful Patterns
+
+- **Trigger ArgoCD sync**: `kubectl patch application <app> -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'`
+
+- **Check S3 bucket from CLI**: `AWS_ACCESS_KEY_ID=electinfo AWS_SECRET_ACCESS_KEY=electinfo123 aws s3 ls s3://bucket/ --endpoint-url http://10.10.0.10:9000`
+
+### Current Status
+
+| Component | Status | Endpoint |
+|-----------|--------|----------|
+| spark-connect-server | Running | sc://spark-connect.spark.svc:15002 (cluster), :31500 (NodePort) |
+| spark-history-server | Running | :30405 (NodePort) |
+| zeppelin-server | Running | https://zeppelin.elect.info |
+| Executors | 5 running | 8 cores, 24GB each |
