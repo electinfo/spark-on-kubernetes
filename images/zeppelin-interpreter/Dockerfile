@@ -34,6 +34,10 @@ USER root
 COPY --from=zeppelin /opt/zeppelin/bin /opt/zeppelin/bin
 COPY --from=zeppelin /opt/zeppelin/interpreter/spark /opt/zeppelin/interpreter/spark
 
+# Create logs directory and set permissions for spark user (uid 185)
+RUN mkdir -p /opt/zeppelin/logs /opt/zeppelin/local-repo && \
+    chown -R 185:185 /opt/zeppelin
+
 ENV ZEPPELIN_HOME=/opt/zeppelin
 
 USER spark

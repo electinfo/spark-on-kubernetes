@@ -15,9 +15,9 @@ configMapGenerator:
   - name: zeppelin-interpreter-spec
     files:
       - 100-interpreter-spec.yaml
-  - name: zeppelin-interpreter-setting
+  - name: zeppelin-conf
     files:
-      - interpreter-setting.json
+      - interpreter.json
 
 generatorOptions:
   disableNameSuffixHash: true

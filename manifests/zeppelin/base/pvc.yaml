@@ -13,21 +13,6 @@ spec:
     requests:
       storage: 10Gi
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: zeppelin-conf-pvc
-  namespace: zeppelin
-  labels:
-    app.kubernetes.io/name: zeppelin
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: openebs-hostpath
-  resources:
-    requests:
-      storage: 1Gi
----
 # Ivy cache for Maven dependencies (shared across interpreter restarts)
 apiVersion: v1
 kind: PersistentVolumeClaim
