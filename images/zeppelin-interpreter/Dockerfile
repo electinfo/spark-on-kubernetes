@@ -2,23 +2,25 @@
 # Spawned by Zeppelin server to run notebooks
 #
 # RUNTIME CONFIG FILES (mounted via K8s ConfigMap):
-# ┌─────────────────────────────────────────┬─────────────────────────────────────────┐
-# │ Source (this repo)                      │ Mount Path                              │
-# ├─────────────────────────────────────────┼─────────────────────────────────────────┤
-# │ config/core-site.xml                    │ /opt/spark/conf/core-site.xml           │
-# │ config/spark-defaults.conf              │ /opt/spark/conf/spark-defaults.conf     │
-# │ config/executor-pod-template.yaml       │ /opt/spark/conf/executor-pod-template.yaml │
-# └─────────────────────────────────────────┴─────────────────────────────────────────┘
+# ┌─────────────────────────────────────────┬───────────────────────────────────────────────┐
+# │ Source (this repo)                      │ Mount Path                                    │
+# ├─────────────────────────────────────────┼───────────────────────────────────────────────┤
+# │ config/core-site.xml                    │ /opt/spark/conf/core-site.xml                 │
+# │ config/spark-defaults.conf              │ /opt/spark/conf/spark-defaults.conf           │
+# │ config/executor-pod-template.yaml       │ /opt/spark/conf/executor-pod-template.yaml    │
+# │ config/log4j.properties                 │ /opt/zeppelin/conf/log4j.properties (subPath) │
+# └─────────────────────────────────────────┴───────────────────────────────────────────────┘
 #
 # RUNTIME VOLUMES (defined in config/100-interpreter-spec.yaml):
-# ┌─────────────────────────────────────────┬─────────────────────────────────┐
-# │ Volume                                  │ Mount Path                      │
-# ├─────────────────────────────────────────┼─────────────────────────────────┤
-# │ NFS 10.10.0.10:/volume1/spark-checkpoints │ /mnt/spark-checkpoints        │
-# │ PVC zeppelin-ivy-cache-pvc              │ /home/zeppelin/.ivy2            │
-# │ emptyDir spark-local                    │ /tmp/spark-local                │
-# │ ConfigMap spark-conf                    │ /opt/spark/conf                 │
-# └─────────────────────────────────────────┴─────────────────────────────────┘
+# ┌─────────────────────────────────────────────┬─────────────────────────────────────────────┐
+# │ Volume                                      │ Mount Path                                  │
+# ├─────────────────────────────────────────────┼─────────────────────────────────────────────┤
+# │ NFS 10.10.0.10:/volume1/spark-checkpoints   │ /mnt/spark-checkpoints                      │
+# │ PVC zeppelin-ivy-cache-pvc                  │ /home/zeppelin/.ivy2                        │
+# │ emptyDir spark-local                        │ /tmp/spark-local                            │
+# │ ConfigMap spark-conf                        │ /opt/spark/conf                             │
+# │ ConfigMap zeppelin-conf (subPath)           │ /opt/zeppelin/conf/log4j.properties         │
+# └─────────────────────────────────────────────┴─────────────────────────────────────────────┘
 
 ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 
@@ -30,8 +32,9 @@ FROM ${REGISTRY}/electinfo/spark-base:latest
 
 USER root
 
-# Copy Zeppelin bin scripts and interpreter JARs from official image
+# Copy Zeppelin bin scripts, conf, and interpreter JARs from official image
 COPY --from=zeppelin /opt/zeppelin/bin /opt/zeppelin/bin
+COPY --from=zeppelin /opt/zeppelin/conf /opt/zeppelin/conf
 COPY --from=zeppelin /opt/zeppelin/interpreter/spark /opt/zeppelin/interpreter/spark
 COPY --from=zeppelin /opt/zeppelin/interpreter/zeppelin-interpreter-shaded-0.12.0.jar /opt/zeppelin/interpreter/
 

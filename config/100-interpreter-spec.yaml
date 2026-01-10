@@ -46,6 +46,9 @@ spec:
   - name: spark-conf
     configMap:
       name: spark-conf
+  - name: zeppelin-conf
+    configMap:
+      name: zeppelin-conf
   containers:
   - name: {{zeppelin.k8s.interpreter.container.name}}
     image: {{zeppelin.k8s.interpreter.container.image}}
@@ -61,6 +64,10 @@ spec:
       mountPath: /mnt/spark-checkpoints
     - name: spark-conf
       mountPath: /opt/spark/conf
+      readOnly: true
+    - name: zeppelin-conf
+      mountPath: /opt/zeppelin/conf/log4j.properties
+      subPath: log4j.properties
       readOnly: true
     args:
       - "$(ZEPPELIN_HOME)/bin/interpreter.sh"

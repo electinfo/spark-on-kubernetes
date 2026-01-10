@@ -1293,9 +1293,9 @@
         },
         "spark.master": {
           "name": "spark.master",
-          "value": "",
+          "value": "k8s://https://kubernetes.default.svc:443",
           "type": "string",
-          "description": "Spark master uri. Leave empty when using spark.remote for Spark Connect mode."
+          "description": "Spark master uri for Kubernetes native mode"
         },
         "spark.submit.deployMode": {
           "name": "spark.submit.deployMode",
@@ -1591,14 +1591,8 @@
         },
         "spark.kubernetes.executor.podTemplateFile": {
           "name": "spark.kubernetes.executor.podTemplateFile",
-          "value": "/opt/zeppelin/notebook/conf/executor-pod-template.yaml",
+          "value": "/opt/spark/conf/executor-pod-template.yaml",
           "type": "string"
-        },
-        "spark.remote": {
-          "name": "spark.remote",
-          "value": "sc://spark-connect.spark.svc:15002",
-          "type": "string",
-          "description": "Spark Connect server URL"
         }
       },
       "status": "READY",

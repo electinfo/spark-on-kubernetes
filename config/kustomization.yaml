@@ -18,6 +18,7 @@ configMapGenerator:
   - name: zeppelin-conf
     files:
       - interpreter.json
+      - log4j.properties
 
 generatorOptions:
   disableNameSuffixHash: true
