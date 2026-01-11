@@ -60,12 +60,44 @@ data:
       # Proxy to Zeppelin server
       server {
         listen 80;
-        location / {
+
+        # WebSocket endpoint
+        location /ws {
           proxy_pass http://localhost:8080;
-          proxy_set_header Host $host;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+
+          # WebSocket timeout settings - keep connection alive
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_connect_timeout 60s;
+
+          # Disable buffering for real-time data
+          proxy_buffering off;
+          proxy_cache off;
+        }
+
+        # All other requests
+        location / {
+          proxy_pass http://localhost:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+
+          # Longer timeouts for notebook operations
+          proxy_read_timeout 300s;
+          proxy_send_timeout 300s;
+          proxy_connect_timeout 60s;
+
           proxy_redirect http://localhost $scheme://SERVICE_DOMAIN;
         }
       }
