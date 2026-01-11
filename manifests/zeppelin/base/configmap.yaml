@@ -35,6 +35,9 @@ data:
   # Git notebook storage configuration
   ZEPPELIN_NOTEBOOK_STORAGE: org.apache.zeppelin.notebook.repo.GitNotebookRepo
   ZEPPELIN_NOTEBOOK_DIR: /opt/zeppelin/notebook
+
+  # Disable Spark version check (Spark 4.1.0 not yet in supported list)
+  ZEPPELIN_SPARK_ENABLESUPPORTEDVERSIONCHECK: "false"
 ---
 apiVersion: v1
 kind: ConfigMap
