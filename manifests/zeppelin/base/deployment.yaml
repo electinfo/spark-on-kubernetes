@@ -101,6 +101,23 @@ spec:
           imagePullPolicy: Always
           command: ["sh", "-c", "$(ZEPPELIN_HOME)/bin/zeppelin.sh"]
           lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "sh"
+                  - "-c"
+                  - |
+                    # Wait for Zeppelin API to be ready, then disable Spark version check
+                    for i in $(seq 1 60); do
+                      if curl -s http://localhost:8080/api/interpreter/setting/spark > /dev/null 2>&1; then
+                        curl -s http://localhost:8080/api/interpreter/setting/spark | \
+                          sed 's/"zeppelin.spark.enableSupportedVersionCheck",\s*"value":\s*true/"zeppelin.spark.enableSupportedVersionCheck","value":false/g' | \
+                          curl -s -X PUT http://localhost:8080/api/interpreter/setting/spark \
+                            -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+                        break
+                      fi
+                      sleep 2
+                    done &
             preStop:
               exec:
                 command: ["sh", "-c", "ps -ef | grep org.apache.zeppelin.server.ZeppelinServer | grep -v grep | awk '{print $2}' | xargs kill"]
