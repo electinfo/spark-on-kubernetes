@@ -103,13 +103,18 @@ spec:
             - "sh"
             - "-c"
             - |
-              # Patch interpreter.json to disable Spark version check before starting Zeppelin
-              CONF_FILE="${ZEPPELIN_HOME}/conf/interpreter.json"
-              if [ -f "$CONF_FILE" ]; then
-                # Use range pattern to find enableSupportedVersionCheck block and change value
-                sed -i '/enableSupportedVersionCheck/,/}/ s/"value": true/"value": false/' "$CONF_FILE"
-                echo "Patched interpreter.json to disable Spark version check"
-              fi
+              # Background process to patch interpreter.json after Zeppelin creates it
+              (
+                CONF_FILE="${ZEPPELIN_HOME}/conf/interpreter.json"
+                for i in $(seq 1 60); do
+                  sleep 5
+                  if [ -f "$CONF_FILE" ] && grep -q '"value": true' "$CONF_FILE"; then
+                    sed -i '/enableSupportedVersionCheck/,/}/ s/"value": true/"value": false/' "$CONF_FILE"
+                    echo "Patched interpreter.json to disable Spark version check"
+                    break
+                  fi
+                done
+              ) &
               exec $(ZEPPELIN_HOME)/bin/zeppelin.sh
           lifecycle:
             preStop:
