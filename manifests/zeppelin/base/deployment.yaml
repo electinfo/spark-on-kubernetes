@@ -149,6 +149,9 @@ spec:
             - name: zeppelin-conf
               mountPath: /opt/zeppelin/conf/interpreter-settings.json
               subPath: interpreter-settings.json
+            - name: zeppelin-conf
+              mountPath: /opt/zeppelin/interpreter/spark/interpreter-setting.json
+              subPath: spark-interpreter-setting.json
             - name: github-ssh-key
               mountPath: /home/zeppelin/.ssh/id_ed25519
               subPath: deploy-key

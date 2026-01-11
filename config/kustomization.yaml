@@ -20,6 +20,7 @@ configMapGenerator:
     files:
       - interpreter-settings.json
       - log4j.properties
+      - spark-interpreter-setting.json
 
 generatorOptions:
   disableNameSuffixHash: true
