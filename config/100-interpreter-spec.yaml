@@ -88,6 +88,8 @@ spec:
     env:
     - name: ZEPPELIN_INTP_JAVA_OPTS
       value: "-Dzeppelin.spark.enableSupportedVersionCheck=false"
+    - name: ZEPPELIN_SPARK_ENABLESUPPORTEDVERSIONCHECK
+      value: "false"
   {% for key, value in zeppelin.k8s.envs.items() %}
     - name: {{key}}
       value: {{value}}
