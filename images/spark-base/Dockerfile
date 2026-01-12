@@ -27,7 +27,8 @@ RUN pip install --no-cache-dir \
     py4j \
     PyYAML \
     requests \
-    graphframes
+    graphframes \
+    opensearch-py>=2.4.0
 
 ENV HADOOP_CONF_DIR=/opt/spark/conf
 
