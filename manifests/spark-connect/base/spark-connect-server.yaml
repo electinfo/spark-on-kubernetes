@@ -123,7 +123,7 @@ data:
     # Executor settings
     spark.executor.instances                             5
     spark.executor.cores                                 8
-    spark.executor.memory                                24g
+    spark.executor.memory                                48g
     spark.driver.memory                                  8g
 
     # Dynamic allocation (disabled for stable executor count)
