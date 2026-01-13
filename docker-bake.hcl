@@ -35,11 +35,13 @@ target "spark-base" {
 }
 
 // Spark images - depend on spark-base
+// no-cache ensures derived images are rebuilt when base changes
 target "spark-executor" {
   context = "images/spark-executor"
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-executor:${TAG}"]
   platforms = ["linux/amd64"]
+  no-cache = true
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -53,6 +55,7 @@ target "spark-driver" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-driver:${TAG}"]
   platforms = ["linux/amd64"]
+  no-cache = true
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -66,6 +69,7 @@ target "spark-connect-server" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-connect-server:${TAG}"]
   platforms = ["linux/amd64"]
+  no-cache = true
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -74,12 +78,13 @@ target "spark-connect-server" {
   }
 }
 
-// Spark runner - depends on spark-connect-server, adds sbt for Scala builds
+// Spark runner - depends on spark-connect-server
 target "spark-runner" {
   context = "images/spark-runner"
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-runner:${TAG}"]
   platforms = ["linux/amd64"]
+  no-cache = true
   args = {
     REGISTRY = "${REGISTRY}"
   }
