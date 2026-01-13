@@ -63,6 +63,8 @@ spec:
           value: $(tasks.get-old-digests.results.spark-connect-server-digest)
         - name: old-zeppelin-server-digest
           value: $(tasks.get-old-digests.results.zeppelin-server-digest)
+        - name: old-spark-runner-digest
+          value: $(tasks.get-old-digests.results.spark-runner-digest)
       workspaces:
         - name: source
           workspace: shared-workspace
@@ -96,6 +98,21 @@ spec:
           value: zeppelin-server
         - name: namespace
           value: zeppelin
+
+    - name: restart-spark-runner
+      runAfter:
+        - build-images
+      when:
+        - input: $(tasks.build-images.results.spark-runner-changed)
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: electinfo-restart-deployment
+      params:
+        - name: deployment-name
+          value: util-rundeck
+        - name: namespace
+          value: rundeck
 ---
 apiVersion: tekton.dev/v1
 kind: Task
@@ -113,6 +130,8 @@ spec:
       description: Current digest of spark-connect-server image
     - name: zeppelin-server-digest
       description: Current digest of zeppelin-server image
+    - name: spark-runner-digest
+      description: Current digest of spark-runner image
   steps:
     - name: get-digests
       image: gcr.io/go-containerregistry/crane:debug
@@ -132,6 +151,11 @@ spec:
         DIGEST=$(crane digest "$REGISTRY/electinfo/zeppelin-server:latest" --insecure 2>/dev/null || echo "none")
         echo "zeppelin-server: $DIGEST"
         echo -n "$DIGEST" > $(results.zeppelin-server-digest.path)
+
+        # spark-runner
+        DIGEST=$(crane digest "$REGISTRY/electinfo/spark-runner:latest" --insecure 2>/dev/null || echo "none")
+        echo "spark-runner: $DIGEST"
+        echo -n "$DIGEST" > $(results.spark-runner-digest.path)
 
         echo "Done getting digests"
 ---
@@ -161,11 +185,16 @@ spec:
     - name: old-zeppelin-server-digest
       type: string
       default: "none"
+    - name: old-spark-runner-digest
+      type: string
+      default: "none"
   results:
     - name: spark-connect-changed
       description: Whether spark-connect-server image changed (true or false)
     - name: zeppelin-server-changed
       description: Whether zeppelin-server image changed (true or false)
+    - name: spark-runner-changed
+      description: Whether spark-runner image changed (true or false)
   workspaces:
     - name: source
   sidecars:
@@ -269,6 +298,16 @@ spec:
           echo -n "false" > $(results.zeppelin-server-changed.path)
         else
           echo -n "true" > $(results.zeppelin-server-changed.path)
+        fi
+
+        # spark-runner
+        OLD="$(params.old-spark-runner-digest)"
+        NEW=$(crane digest "$REGISTRY/electinfo/spark-runner:latest" --insecure 2>/dev/null || echo "error")
+        echo "spark-runner: old=$OLD new=$NEW"
+        if [ "$OLD" = "$NEW" ]; then
+          echo -n "false" > $(results.spark-runner-changed.path)
+        else
+          echo -n "true" > $(results.spark-runner-changed.path)
         fi
 
         echo "Done checking changes"
