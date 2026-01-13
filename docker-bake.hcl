@@ -16,9 +16,9 @@ group "default" {
   targets = ["spark-base", "spark-images", "zeppelin-images"]
 }
 
-// Just Spark images (executor, driver, connect server)
+// Just Spark images (executor, driver, connect server, runner)
 group "spark-images" {
-  targets = ["spark-executor", "spark-driver", "spark-connect-server"]
+  targets = ["spark-executor", "spark-driver", "spark-connect-server", "spark-runner"]
 }
 
 // Just Zeppelin images
@@ -71,6 +71,20 @@ target "spark-connect-server" {
   }
   contexts = {
     "${REGISTRY}/electinfo/spark-base:latest" = "target:spark-base"
+  }
+}
+
+// Spark runner - depends on spark-connect-server, adds sbt for Scala builds
+target "spark-runner" {
+  context = "images/spark-runner"
+  dockerfile = "Dockerfile"
+  tags = ["${REGISTRY}/electinfo/spark-runner:${TAG}"]
+  platforms = ["linux/amd64"]
+  args = {
+    REGISTRY = "${REGISTRY}"
+  }
+  contexts = {
+    "${REGISTRY}/electinfo/spark-connect-server:latest" = "target:spark-connect-server"
   }
 }
 
