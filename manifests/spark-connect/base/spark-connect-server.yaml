@@ -188,7 +188,7 @@ data:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  spark-role: executor
+                  spark-app-name: spark-connect-server
               topologyKey: kubernetes.io/hostname
 
 ---
