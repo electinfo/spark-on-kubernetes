@@ -20,4 +20,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends sbt && \
     rm -rf /var/lib/apt/lists/*
 
+# Create home directory for spark user with proper permissions
+RUN mkdir -p /home/spark && chown spark:spark /home/spark
+
+ENV HOME=/home/spark
+
 USER spark
