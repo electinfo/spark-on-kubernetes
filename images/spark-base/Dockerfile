@@ -9,6 +9,13 @@
 # │ config/spark-defaults.conf      │ /opt/spark/conf/spark-defaults.conf │
 # └─────────────────────────────────┴─────────────────────────────────┘
 
+# Stage 1: Fetch S3A dependencies using Maven
+FROM maven:3.9-eclipse-temurin-21 AS deps
+WORKDIR /deps
+ADD pom.xml .
+RUN mvn dependency:copy-dependencies -DoutputDirectory=/deps/jars -DincludeScope=runtime
+
+# Stage 2: Build final image
 FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
 
 USER root
@@ -31,5 +38,8 @@ RUN pip install --no-cache-dir \
     opensearch-py>=2.4.0
 
 ENV HADOOP_CONF_DIR=/opt/spark/conf
+
+# Copy S3A dependencies from Maven stage
+COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 
 USER spark
