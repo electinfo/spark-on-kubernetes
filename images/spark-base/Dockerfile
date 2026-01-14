@@ -46,13 +46,16 @@ COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 # Copy Ivy settings for local maven repository
 COPY conf/ivysettings.xml /opt/spark/conf/ivysettings.xml
 
-# Patch the ivy JAR to use our custom ivysettings.xml as the default
+# Patch ALL ivy JARs to use our custom ivysettings.xml as the default
 # This ensures Hive's IsolatedClientLoader (which ignores external settings) uses our Nexus proxy
-RUN IVY_JAR=$(ls /opt/spark/jars/ivy-*.jar | head -1) && \
-    mkdir -p /tmp/ivy-patch/org/apache/ivy/core/settings && \
+# Must patch both /opt/spark/jars/ivy-*.jar AND /opt/spark/hive4/ivy-*.jar
+RUN mkdir -p /tmp/ivy-patch/org/apache/ivy/core/settings && \
     cp /opt/spark/conf/ivysettings.xml /tmp/ivy-patch/org/apache/ivy/core/settings/ivysettings.xml && \
     cd /tmp/ivy-patch && \
-    zip -u "$IVY_JAR" org/apache/ivy/core/settings/ivysettings.xml && \
+    for IVY_JAR in $(find /opt/spark -name "ivy-*.jar" 2>/dev/null); do \
+        echo "Patching $IVY_JAR with custom ivysettings.xml" && \
+        zip -u "$IVY_JAR" org/apache/ivy/core/settings/ivysettings.xml; \
+    done && \
     rm -rf /tmp/ivy-patch
 
 USER spark
