@@ -21,7 +21,7 @@ FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
 
 USER root
 
-RUN apt-get update && apt-get install -y --no-install-recommends python-is-python3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python-is-python3 zip && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
     pyarrow>=15.0.0 \
@@ -45,5 +45,14 @@ COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 
 # Copy Ivy settings for local maven repository
 COPY conf/ivysettings.xml /opt/spark/conf/ivysettings.xml
+
+# Patch the ivy JAR to use our custom ivysettings.xml as the default
+# This ensures Hive's IsolatedClientLoader (which ignores external settings) uses our Nexus proxy
+RUN IVY_JAR=$(ls /opt/spark/jars/ivy-*.jar | head -1) && \
+    mkdir -p /tmp/ivy-patch/org/apache/ivy/core/settings && \
+    cp /opt/spark/conf/ivysettings.xml /tmp/ivy-patch/org/apache/ivy/core/settings/ivysettings.xml && \
+    cd /tmp/ivy-patch && \
+    zip -u "$IVY_JAR" org/apache/ivy/core/settings/ivysettings.xml && \
+    rm -rf /tmp/ivy-patch
 
 USER spark
