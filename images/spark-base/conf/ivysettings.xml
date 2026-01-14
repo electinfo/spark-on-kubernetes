@@ -5,6 +5,10 @@
   <caches defaultCacheDir="${user.home}/.ivy2/cache"/>
 
   <resolvers>
+    <!-- Override Hive's hardcoded repo-1 to use our Nexus proxy -->
+    <ibiblio name="repo-1" m2compatible="true"
+             root="https://repo.elect.info/repository/maven-public/"/>
+
     <chain name="electinfo-chain" returnFirst="true">
       <!-- Local cache first -->
       <filesystem name="local-cache">
