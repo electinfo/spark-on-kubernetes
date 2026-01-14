@@ -46,12 +46,10 @@ ENV HADOOP_CONF_DIR=/opt/spark/conf
 # Copy S3A dependencies from Maven stage
 COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 
-# Replace hive-metastore JAR with Hive 4.1.0 version
-# This fixes "Invalid method name: 'get_table'" error when connecting to Hive 4.x metastore
-RUN rm -f /opt/spark/jars/hive-metastore-*.jar /opt/spark/jars/hive-storage-api-*.jar
-COPY --from=deps /deps/hive4/hive-metastore-*.jar /opt/spark/jars/
-COPY --from=deps /deps/hive4/hive-storage-api-*.jar /opt/spark/jars/
-COPY --from=deps /deps/hive4/libthrift-*.jar /opt/spark/jars/
-COPY --from=deps /deps/hive4/libfb303-*.jar /opt/spark/jars/
+# Copy Hive 4.x metastore client JARs to separate directory
+# Use with: spark.sql.hive.metastore.jars=path
+#           spark.sql.hive.metastore.jars.path=file:///opt/spark/hive4/*
+# This keeps Spark's bundled Hive JARs intact while providing Hive 4.x for metastore
+COPY --from=deps /deps/hive4/ /opt/spark/hive4/
 
 USER spark
