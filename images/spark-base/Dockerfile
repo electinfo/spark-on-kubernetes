@@ -9,11 +9,15 @@
 # │ config/spark-defaults.conf      │ /opt/spark/conf/spark-defaults.conf │
 # └─────────────────────────────────┴─────────────────────────────────┘
 
-# Stage 1: Fetch S3A dependencies using Maven
+# Stage 1: Fetch dependencies using Maven
 FROM maven:3.9-eclipse-temurin-21 AS deps
 WORKDIR /deps
 ADD pom.xml .
-RUN mvn dependency:copy-dependencies -DoutputDirectory=/deps/jars -DincludeScope=runtime
+ADD pom-hive4.xml .
+# S3A dependencies go to /deps/jars (merged into /opt/spark/jars)
+RUN mvn dependency:copy-dependencies -f pom.xml -DoutputDirectory=/deps/jars -DincludeScope=runtime
+# Hive 4.x metastore client JARs go to separate directory (for spark.sql.hive.metastore.jars=path)
+RUN mvn dependency:copy-dependencies -f pom-hive4.xml -DoutputDirectory=/deps/hive4 -DincludeScope=runtime
 
 # Stage 2: Build final image
 FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
@@ -41,5 +45,9 @@ ENV HADOOP_CONF_DIR=/opt/spark/conf
 
 # Copy S3A dependencies from Maven stage
 COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
+
+# Copy Hive 4.x metastore client JARs to separate directory
+# Use with: spark.sql.hive.metastore.jars=path spark.sql.hive.metastore.jars.path=/opt/spark/hive4/*
+COPY --from=deps /deps/hive4/*.jar /opt/spark/hive4/
 
 USER spark
