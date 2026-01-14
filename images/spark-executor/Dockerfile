@@ -15,6 +15,9 @@
 # │ NFS 10.10.0.10:/volume1/spark-checkpoints │ /mnt/spark-checkpoints │
 # └─────────────────────────────────┴─────────────────────────────────┘
 
+# Global ARG for registry (must be before any FROM to be used in FROM)
+ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
+
 # Stage 1: Download Hive 4.x metastore client dependencies
 FROM maven:3.9-eclipse-temurin-21 AS hive4-deps
 WORKDIR /deps
@@ -23,7 +26,6 @@ COPY pom-hive4.xml .
 RUN mvn dependency:copy-dependencies -f pom-hive4.xml -DoutputDirectory=/deps/hive4 -DincludeScope=runtime
 
 # Stage 2: Build executor image
-ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 FROM ${REGISTRY}/electinfo/spark-base:latest
 
 USER root
