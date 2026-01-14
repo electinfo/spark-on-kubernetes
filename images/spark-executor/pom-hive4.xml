@@ -1,0 +1,25 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>info.elect</groupId>
+  <artifactId>spark-hive4-deps</artifactId>
+  <version>1.0</version>
+  <description>
+    Hive 4.x Metastore Client JARs for Spark Operator.
+    Use with:
+      spark.sql.hive.metastore.version=4.1.0
+      spark.sql.hive.metastore.jars=path
+      spark.sql.hive.metastore.jars.path=file:///opt/spark/hive4
+
+    IsolatedClientLoader creates a child-first classloader, so we include
+    ALL transitive dependencies to match what Maven downloads at runtime.
+  </description>
+  <dependencies>
+    <!-- Hive metastore with ALL dependencies - no exclusions needed because
+         IsolatedClientLoader uses an isolated classloader -->
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-metastore</artifactId>
+      <version>4.1.0</version>
+    </dependency>
+  </dependencies>
+</project>
