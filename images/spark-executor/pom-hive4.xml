@@ -21,5 +21,46 @@
       <artifactId>hive-metastore</artifactId>
       <version>4.1.0</version>
     </dependency>
+
+    <!-- hive-exec pulls in additional transitive dependencies -->
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>4.1.0</version>
+    </dependency>
+
+    <!-- Datanucleus JARs - marked as 'provided' in hive-metastore but needed for JDO persistence -->
+    <dependency>
+      <groupId>org.datanucleus</groupId>
+      <artifactId>datanucleus-core</artifactId>
+      <version>6.0.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.datanucleus</groupId>
+      <artifactId>datanucleus-api-jdo</artifactId>
+      <version>6.0.5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.datanucleus</groupId>
+      <artifactId>datanucleus-rdbms</artifactId>
+      <version>6.0.10</version>
+    </dependency>
+    <dependency>
+      <groupId>org.datanucleus</groupId>
+      <artifactId>javax.jdo</artifactId>
+      <version>3.2.1</version>
+    </dependency>
+
+    <!-- Guice - dependency injection, often marked as provided -->
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <version>4.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-servlet</artifactId>
+      <version>4.2.3</version>
+    </dependency>
   </dependencies>
 </project>
