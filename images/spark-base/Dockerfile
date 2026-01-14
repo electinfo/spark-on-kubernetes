@@ -43,4 +43,7 @@ ENV HADOOP_CONF_DIR=/opt/spark/conf
 # Copy S3A dependencies from Maven stage
 COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 
+# Copy Ivy settings for local maven repository
+COPY conf/ivysettings.xml /opt/spark/conf/ivysettings.xml
+
 USER spark

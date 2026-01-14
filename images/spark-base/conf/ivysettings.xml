@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivysettings>
+  <settings defaultResolver="electinfo-chain"/>
+
+  <caches defaultCacheDir="${user.home}/.ivy2/cache"/>
+
+  <resolvers>
+    <chain name="electinfo-chain" returnFirst="true">
+      <!-- Local cache first -->
+      <filesystem name="local-cache">
+        <artifact pattern="${user.home}/.ivy2/local/[organisation]/[module]/[revision]/[artifact]-[revision].[ext]"/>
+        <ivy pattern="${user.home}/.ivy2/local/[organisation]/[module]/[revision]/ivy-[revision].xml"/>
+      </filesystem>
+
+      <!-- Local maven repository (Nexus proxy) -->
+      <ibiblio name="electinfo-maven" m2compatible="true"
+               root="https://repo.elect.info/repository/maven-public/"/>
+
+      <!-- Fallback to maven central (if not in local repo) -->
+      <ibiblio name="maven-central" m2compatible="true"
+               root="https://repo1.maven.org/maven2/"/>
+    </chain>
+  </resolvers>
+</ivysettings>
