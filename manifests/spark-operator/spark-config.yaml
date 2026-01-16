@@ -56,5 +56,5 @@ data:
     logger.hadoop.level=WARN
 
     # Keep job output visible
-    logger.info.elect.name=info.elect
-    logger.info.elect.level=INFO
+    logger.infoelect.name=info.elect
+    logger.infoelect.level=INFO
