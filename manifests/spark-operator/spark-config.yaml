@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-operator-config
+  namespace: spark
+data:
+  spark-defaults.conf: |
+    # Hive Metastore
+    spark.hadoop.hive.metastore.uris=thrift://app-hive.electinfo.svc.cluster.local:9083
+    spark.sql.catalogImplementation=hive
+    spark.sql.hive.metastore.version=4.1.0
+    spark.sql.hive.metastore.jars=path
+    spark.sql.hive.metastore.jars.path=file:///opt/spark/hive4/*
+    spark.sql.warehouse.dir=s3a://hive-warehouse/
+
+    # S3A Configuration (s3proxy on asustor)
+    spark.hadoop.fs.defaultFS=s3a://static-pages
+    spark.hadoop.fs.s3a.endpoint=http://10.10.0.10:9000
+    spark.hadoop.fs.s3a.path.style.access=true
+    spark.hadoop.fs.s3a.access.key=electinfo
+    spark.hadoop.fs.s3a.secret.key=electinfo123
+
+    # Ivy Cache (writable)
+    spark.jars.ivySettings=/opt/spark/conf/ivysettings.xml
+
+    # Performance
+    spark.eventLog.enabled=false
+    spark.sql.adaptive.enabled=true
+
+    # Ivy and home directory settings (log4j config is set via JAVA_TOOL_OPTIONS env var in SparkApplication)
+    spark.driver.extraJavaOptions=-Duser.home=/tmp -Divy.default.ivy.user.dir=/tmp/.ivy2 -Divy.settings.file=/opt/spark/conf/ivysettings.xml
+    spark.executor.extraJavaOptions=-Duser.home=/tmp -Divy.default.ivy.user.dir=/tmp/.ivy2
+
+  log4j2.properties: |
+    # Set root logger to WARN to reduce noise
+    rootLogger.level=WARN
+    rootLogger.appenderRef.console.ref=console
+
+    # Console appender
+    appender.console.type=Console
+    appender.console.name=console
+    appender.console.target=SYSTEM_ERR
+    appender.console.layout.type=PatternLayout
+    appender.console.layout.pattern=%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n%ex
+
+    # Spark internals
+    logger.spark.name=org.apache.spark
+    logger.spark.level=WARN
+
+    # Hive
+    logger.hive.name=org.apache.hive
+    logger.hive.level=WARN
+
+    # Hadoop
+    logger.hadoop.name=org.apache.hadoop
+    logger.hadoop.level=WARN
+
+    # Keep job output visible
+    logger.info.elect.name=info.elect
+    logger.info.elect.level=INFO
