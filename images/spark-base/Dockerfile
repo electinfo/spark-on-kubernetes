@@ -36,7 +36,8 @@ RUN pip install --no-cache-dir \
     PyYAML \
     requests \
     graphframes \
-    opensearch-py>=2.4.0
+    opensearch-py>=2.4.0 \
+    psycopg2-binary
 
 ENV HADOOP_CONF_DIR=/opt/spark/conf
 
