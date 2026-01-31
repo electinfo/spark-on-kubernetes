@@ -1,0 +1,124 @@
+# Spark History Server - View completed/failed Spark application logs
+#
+# Reads event logs from S3 and provides the Spark UI for historical analysis.
+# Useful for debugging failed Spark Operator jobs after pods are cleaned up.
+#
+# Access: http://cyberpower:30405 or https://spark-history.elect.info
+#
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  namespace: spark
+  labels:
+    app: spark-history-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-history-server
+  template:
+    metadata:
+      labels:
+        app: spark-history-server
+    spec:
+      serviceAccountName: spark-operator-spark
+      nodeSelector:
+        kubernetes.io/hostname: cyberpower
+      containers:
+        - name: spark-history-server
+          image: localhost:32000/electinfo/spark-connect-server:latest
+          imagePullPolicy: Always
+          command:
+            - /bin/bash
+            - -c
+            - |
+              exec /opt/spark/sbin/start-history-server.sh \
+                --properties-file /opt/spark/conf/spark-history.conf
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "true"
+            - name: SPARK_HISTORY_OPTS
+              value: "-Dspark.history.fs.logDirectory=s3a://spark-history/"
+          ports:
+            - name: http
+              containerPort: 18080
+              protocol: TCP
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: spark-conf
+              mountPath: /opt/spark/conf
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 18080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 18080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: spark-conf
+          configMap:
+            name: spark-history-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-history-config
+  namespace: spark
+data:
+  spark-history.conf: |
+    # Spark History Server configuration
+
+    # Event log location (S3)
+    spark.history.fs.logDirectory              s3a://spark-history/
+    spark.history.fs.update.interval           10s
+    spark.history.retainedApplications         50
+    spark.history.ui.maxApplications           100
+
+    # Cleaner settings (retain 7 days)
+    spark.history.fs.cleaner.enabled           true
+    spark.history.fs.cleaner.interval          1d
+    spark.history.fs.cleaner.maxAge            7d
+    spark.history.fs.cleaner.maxNum            100
+
+    # S3A configuration for MinIO/s3proxy
+    spark.hadoop.fs.s3a.endpoint               http://10.10.0.10:9000
+    spark.hadoop.fs.s3a.path.style.access      true
+    spark.hadoop.fs.s3a.impl                   org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.connection.ssl.enabled false
+    spark.hadoop.fs.s3a.access.key             electinfo
+    spark.hadoop.fs.s3a.secret.key             electinfo123
+    spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    spark.hadoop.fs.s3a.change.detection.mode  none
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history-server
+  namespace: spark
+  labels:
+    app: spark-history-server
+spec:
+  type: NodePort
+  selector:
+    app: spark-history-server
+  ports:
+    - name: http
+      port: 18080
+      targetPort: 18080
+      nodePort: 30405
+      protocol: TCP
