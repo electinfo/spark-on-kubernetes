@@ -34,6 +34,7 @@ n# Spark on Kubernetes Roadmap
 ### Documentation
 - [ ] Add Spark Connect client connection examples
 - [ ] Document rundeck job configuration for Spark Connect
+- [ ] Add Spark Operator integration guide
 
 ## Future
 
