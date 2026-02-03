@@ -20,13 +20,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-# Install geospatial Python packages and AWS CLI (client-side only)
-# AWS CLI installed via pip to avoid version conflicts with botocore
+# Install geospatial Python packages (client-side only)
 RUN pip install --no-cache-dir \
     geopandas \
     shapely \
     pyproj \
-    fiona \
-    awscli
+    fiona
+
+# Install AWS CLI v2 (supports --no-checksum-algorithm for s3proxy compatibility)
+RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip \
+    && unzip -q /tmp/awscliv2.zip -d /tmp \
+    && /tmp/aws/install \
+    && rm -rf /tmp/awscliv2.zip /tmp/aws
 
 USER spark
