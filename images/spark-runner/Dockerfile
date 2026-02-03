@@ -10,10 +10,11 @@ FROM ${REGISTRY}/electinfo/spark-connect-server:latest
 
 USER root
 
-# Install GDAL system dependencies for geopandas
+# Install GDAL system dependencies for geopandas and AWS CLI
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gdal-bin \
     libgdal-dev \
+    awscli \
     && rm -rf /var/lib/apt/lists/*
 
 # Set GDAL environment for fiona compilation
