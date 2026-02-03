@@ -10,22 +10,23 @@ FROM ${REGISTRY}/electinfo/spark-connect-server:latest
 
 USER root
 
-# Install GDAL system dependencies for geopandas and AWS CLI for s3proxy uploads
+# Install GDAL system dependencies for geopandas
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gdal-bin \
     libgdal-dev \
-    awscli \
     && rm -rf /var/lib/apt/lists/*
 
 # Set GDAL environment for fiona compilation
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-# Install geospatial Python packages (client-side only, not needed on executors)
+# Install geospatial Python packages and AWS CLI (client-side only)
+# AWS CLI installed via pip to avoid version conflicts with botocore
 RUN pip install --no-cache-dir \
     geopandas \
     shapely \
     pyproj \
-    fiona
+    fiona \
+    awscli
 
 USER spark
