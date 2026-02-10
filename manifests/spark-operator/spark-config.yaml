@@ -31,30 +31,8 @@ data:
     spark.driver.extraJavaOptions=-Duser.home=/tmp -Divy.default.ivy.user.dir=/tmp/.ivy2 -Divy.settings.file=/opt/spark/conf/ivysettings.xml
     spark.executor.extraJavaOptions=-Duser.home=/tmp -Divy.default.ivy.user.dir=/tmp/.ivy2
 
-  log4j2.properties: |
-    # Set root logger to WARN to reduce noise
-    rootLogger.level=WARN
-    rootLogger.appenderRef.console.ref=console
-
-    # Console appender
-    appender.console.type=Console
-    appender.console.name=console
-    appender.console.target=SYSTEM_ERR
-    appender.console.layout.type=PatternLayout
-    appender.console.layout.pattern=%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n%ex
-
-    # Spark internals
-    logger.spark.name=org.apache.spark
-    logger.spark.level=WARN
-
-    # Hive
-    logger.hive.name=org.apache.hive
-    logger.hive.level=WARN
-
-    # Hadoop
-    logger.hadoop.name=org.apache.hadoop
-    logger.hadoop.level=WARN
-
-    # Keep job output visible
-    logger.infoelect.name=info.elect
-    logger.infoelect.level=INFO
+  # NOTE: Do NOT add log4j2.properties here. The Spark Operator v2.1.0 webhook
+  # auto-detects this key and injects a subPath volume mount at
+  # /opt/spark/conf/log4j2.properties, which fails because /opt/spark/conf
+  # already has projected volumes. Logging is controlled via
+  # -Droot.logger.level=WARN in extraJavaOptions instead.
