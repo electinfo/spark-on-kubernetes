@@ -137,7 +137,7 @@ data:
     spark.sql.hive.metastore.version                     4.1.0
     spark.sql.hive.metastore.jars                        maven
     spark.hadoop.hive.metastore.uris                     thrift://app-hive.electinfo.svc.cluster.local:9083
-    spark.sql.warehouse.dir                              s3a://electinfo/hive-warehouse
+    spark.sql.warehouse.dir                              s3a://hive-warehouse/
 
     # Event logging
     spark.eventLog.enabled                               true
