@@ -18,6 +18,12 @@
       <version>4.1.0</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_2.13</artifactId>
+      <version>4.1.0</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
