@@ -110,9 +110,9 @@ spec:
         name: electinfo-restart-deployment
       params:
         - name: deployment-name
-          value: util-rundeck
+          value: spark-runner
         - name: namespace
-          value: rundeck
+          value: spark
 ---
 apiVersion: tekton.dev/v1
 kind: Task
