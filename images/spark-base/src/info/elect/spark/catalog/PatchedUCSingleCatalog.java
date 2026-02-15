@@ -1,7 +1,6 @@
 package info.elect.spark.catalog;
 
 import io.unitycatalog.spark.UCSingleCatalog;
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException;
 import org.apache.spark.sql.connector.catalog.Identifier;
 import org.apache.spark.sql.connector.catalog.Table;
 import org.apache.spark.sql.connector.catalog.TableCatalog;
@@ -39,8 +38,13 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     }
 
     @Override
-    public Table alterTable(Identifier ident, TableChange... changes)
-            throws NoSuchTableException {
-        return getDelegate().alterTable(ident, changes);
+    public Table alterTable(Identifier ident, TableChange... changes) {
+        try {
+            return getDelegate().alterTable(ident, changes);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("alterTable failed", e);
+        }
     }
 }
