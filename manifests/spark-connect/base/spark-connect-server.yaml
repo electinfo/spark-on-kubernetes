@@ -169,8 +169,8 @@ data:
     spark.hadoop.fs.s3a.change.detection.mode            none
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
 
-    # Use FileSystem-based checkpoint manager for S3A compatibility
-    spark.sql.streaming.checkpointFileManagerClass       org.apache.spark.sql.execution.streaming.checkpointing.FileSystemBasedCheckpointFileManager
+    # S3A-compatible checkpoint manager: catches FileNotFoundException on list()
+    spark.sql.streaming.checkpointFileManagerClass       info.elect.spark.streaming.S3ACheckpointFileManager
 
   metrics.properties: |
     # Enable Prometheus metrics export
