@@ -7,7 +7,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.spark.sql.execution.streaming.checkpointing.FileSystemBasedCheckpointFileManager;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 
 /**
  * CheckpointFileManager that handles S3A's FileNotFoundException on directory listing.
@@ -19,6 +18,9 @@ import java.io.IOException;
  *
  * This manager catches FileNotFoundException in list() and returns an empty array,
  * matching HDFS behavior.
+ *
+ * Note: The parent class is Scala-compiled and throws IOException at runtime despite
+ * not declaring it, so we catch Exception and re-throw non-FNFE exceptions.
  */
 public class S3ACheckpointFileManager extends FileSystemBasedCheckpointFileManager {
 
@@ -27,20 +29,34 @@ public class S3ACheckpointFileManager extends FileSystemBasedCheckpointFileManag
     }
 
     @Override
-    public FileStatus[] list(Path path) throws IOException {
+    @SuppressWarnings("all")
+    public FileStatus[] list(Path path) {
         try {
             return super.list(path);
-        } catch (FileNotFoundException e) {
-            return new FileStatus[0];
+        } catch (Exception e) {
+            if (e instanceof FileNotFoundException) {
+                return new FileStatus[0];
+            }
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public FileStatus[] list(Path path, PathFilter filter) throws IOException {
+    @SuppressWarnings("all")
+    public FileStatus[] list(Path path, PathFilter filter) {
         try {
             return super.list(path, filter);
-        } catch (FileNotFoundException e) {
-            return new FileStatus[0];
+        } catch (Exception e) {
+            if (e instanceof FileNotFoundException) {
+                return new FileStatus[0];
+            }
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException(e);
         }
     }
 }
