@@ -36,6 +36,7 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tm
 
 # Install Unity Catalog CLI (copy from official UC image)
 COPY --from=unitycatalog/unitycatalog:v0.4.0 /home/unitycatalog /home/unitycatalog
+RUN chmod -R a+rX /home/unitycatalog
 ENV PATH="/home/unitycatalog/bin:${PATH}"
 
 USER spark
