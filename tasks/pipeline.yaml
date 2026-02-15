@@ -69,9 +69,18 @@ spec:
         - name: source
           workspace: shared-workspace
 
-    - name: restart-spark-connect
+    - name: sync-argocd
       runAfter:
         - build-images
+      taskRef:
+        name: electinfo-argocd-sync
+      params:
+        - name: app-names
+          value: "app-spark-connect"
+
+    - name: restart-spark-connect
+      runAfter:
+        - sync-argocd
       when:
         - input: $(tasks.build-images.results.spark-connect-changed)
           operator: in
@@ -86,7 +95,7 @@ spec:
 
     - name: restart-zeppelin
       runAfter:
-        - build-images
+        - sync-argocd
       when:
         - input: $(tasks.build-images.results.zeppelin-server-changed)
           operator: in
@@ -101,7 +110,7 @@ spec:
 
     - name: restart-spark-runner
       runAfter:
-        - build-images
+        - sync-argocd
       when:
         - input: $(tasks.build-images.results.spark-runner-changed)
           operator: in
