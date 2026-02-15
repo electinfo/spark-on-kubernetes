@@ -1,0 +1,43 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>info.elect</groupId>
+  <artifactId>spark-catalog-patch</artifactId>
+  <version>1.0</version>
+  <packaging>jar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.unitycatalog</groupId>
+      <artifactId>unitycatalog-spark_2.13</artifactId>
+      <version>0.4.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-catalyst_2.13</artifactId>
+      <version>4.1.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql-api_2.13</artifactId>
+      <version>4.1.0</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <source>21</source>
+          <target>21</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

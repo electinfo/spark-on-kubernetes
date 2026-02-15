@@ -115,7 +115,7 @@ data:
 
     # Unity Catalog
     spark.sql.defaultCatalog                             electinfo
-    spark.sql.catalog.electinfo                          io.unitycatalog.spark.UCSingleCatalog
+    spark.sql.catalog.electinfo                          info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.electinfo.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.electinfo.token
     spark.sql.catalog.electinfo.renewCredential.enabled  false

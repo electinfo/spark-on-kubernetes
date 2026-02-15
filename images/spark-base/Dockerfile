@@ -16,6 +16,13 @@ ADD pom.xml .
 # S3A dependencies go to /deps/jars (merged into /opt/spark/jars)
 RUN mvn dependency:copy-dependencies -f pom.xml -DoutputDirectory=/deps/jars -DincludeScope=runtime
 
+# Stage 1b: Build patched UC catalog (alterTable delegation)
+# UC OSS v0.4.0 stubs alterTable; Spark DLT DatasetManager requires it
+WORKDIR /catalog-patch
+ADD pom-catalog-patch.xml pom.xml
+ADD src src
+RUN mvn package -q && cp target/spark-catalog-patch-1.0.jar /deps/jars/
+
 # Stage 2: Build final image
 FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
 
