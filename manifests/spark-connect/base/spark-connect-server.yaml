@@ -169,6 +169,9 @@ data:
     spark.hadoop.fs.s3a.change.detection.mode            none
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
 
+    # Use FileSystem-based checkpoint manager for S3A compatibility
+    spark.sql.streaming.checkpointFileManagerClass       org.apache.spark.sql.execution.streaming.checkpointing.FileSystemBasedCheckpointFileManager
+
   metrics.properties: |
     # Enable Prometheus metrics export
     *.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
