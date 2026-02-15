@@ -77,9 +77,9 @@ spec:
           operator: in
           values: ["true"]
       taskRef:
-        name: electinfo-restart-sparkapplication
+        name: electinfo-restart-deployment
       params:
-        - name: sparkapplication-name
+        - name: deployment-name
           value: spark-connect-server
         - name: namespace
           value: spark
