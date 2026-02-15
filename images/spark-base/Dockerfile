@@ -21,7 +21,7 @@ RUN mvn dependency:copy-dependencies -f pom.xml -DoutputDirectory=/deps/jars -Di
 WORKDIR /catalog-patch
 ADD pom-catalog-patch.xml pom.xml
 ADD src src
-RUN mvn package -q && cp target/spark-catalog-patch-1.0.jar /deps/jars/
+RUN mvn package -q
 
 # Stage 2: Build final image
 FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
@@ -51,6 +51,11 @@ ENV HADOOP_CONF_DIR=/opt/spark/conf
 
 # Copy S3A dependencies from Maven stage
 COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
+
+# Copy patched UC catalog JAR to separate dir (loaded via spark.jars, not system classpath)
+# Must be loaded by same classloader as UC connector (via spark.jars.packages) to avoid ClassCastException
+RUN mkdir -p /opt/spark/custom-jars
+COPY --from=deps /catalog-patch/target/spark-catalog-patch-1.0.jar /opt/spark/custom-jars/
 
 # Copy Ivy settings for local maven repository
 COPY conf/ivysettings.xml /opt/spark/conf/ivysettings.xml
