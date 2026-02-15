@@ -114,6 +114,7 @@ data:
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
 
     # Unity Catalog
+    spark.sql.defaultCatalog                             electinfo
     spark.sql.catalog.electinfo                          io.unitycatalog.spark.UCSingleCatalog
     spark.sql.catalog.electinfo.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.electinfo.token
