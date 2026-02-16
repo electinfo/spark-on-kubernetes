@@ -68,8 +68,8 @@ spec:
         echo "=== Setting version and build overrides ==="
         cat > version.sbt << 'VEOF'
         ThisBuild / version := "$(params.publish-version)"
-        // Skip javadoc generation — doc task doesn't depend on OpenAPI generate
-        // and fails when generated sources aren't available yet
+        // Skip javadoc — doc task doesn't depend on OpenAPI generate
+        ThisBuild / Compile / doc / sources := Seq.empty
         ThisBuild / packageDoc / publishArtifact := false
         VEOF
 
@@ -99,7 +99,9 @@ spec:
         EOF
 
         echo "=== Building and publishing UC client + spark connector ==="
-        sbt -no-colors client/publish spark/publish
+        # Compile client first to trigger OpenAPI code generation,
+        # then publish both modules
+        sbt -no-colors "client/compile" "client/publish" "spark/publish"
 
         echo "=== Publish complete ==="
         CLIENT="io.unitycatalog:unitycatalog-client:$(params.publish-version)"
