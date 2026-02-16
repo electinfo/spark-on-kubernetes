@@ -65,9 +65,12 @@ spec:
         sed -i 's/lazy val sparkVersion = "4.0.0"/lazy val sparkVersion = "$(params.spark-version)"/' build.sbt
         grep "lazy val sparkVersion" build.sbt
 
-        echo "=== Setting version to $(params.publish-version) ==="
+        echo "=== Setting version and build overrides ==="
         cat > version.sbt << 'VEOF'
         ThisBuild / version := "$(params.publish-version)"
+        // Skip javadoc generation — doc task doesn't depend on OpenAPI generate
+        // and fails when generated sources aren't available yet
+        ThisBuild / packageDoc / publishArtifact := false
         VEOF
 
         echo "=== Adding Nexus publish settings ==="
