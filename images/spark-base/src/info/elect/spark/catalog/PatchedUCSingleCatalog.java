@@ -18,27 +18,26 @@ import java.util.Map;
  *    Spark 4.1.0 Declarative Pipelines DatasetManager calls it during table
  *    materialization. This patch makes it a no-op that returns the current table.
  *
- * 2. createTable: UC requires 'delta.feature.catalogManaged'='supported' as a
- *    table property for managed tables. This patch injects it automatically so
- *    pipeline definitions don't need to specify it.
+ * 2. createTable missing properties: UCProxy.createTable(StructType) asserts that
+ *    'provider' is non-null (line 478) and 'delta.feature.catalogManaged'='supported'
+ *    is required for managed Delta tables. The pipeline engine doesn't always include
+ *    these in the properties map. This patch injects them automatically.
  *
- * 3. createTable assertion: UC v0.4.0 UCProxy.createTable(Column[]) creates the
- *    table via REST API, then calls super.createTable which triggers the default
- *    TableCatalog Column[]->StructType conversion. That dispatches back to
- *    UCProxy.createTable(StructType) which has assert(false). We catch the
- *    AssertionError and return the already-created table via loadTable.
+ * 3. createTable assertion safety net: If any assertion in UCProxy still fires
+ *    (e.g. missing location), we catch AssertionError and attempt loadTable in case
+ *    the table was partially created.
  */
 public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
     private static final String CATALOG_MANAGED_KEY = "delta.feature.catalogManaged";
     private static final String CATALOG_MANAGED_VALUE = "supported";
+    private static final String PROVIDER_KEY = "provider";
+    private static final String PROVIDER_DEFAULT = "delta";
 
-    private Map<String, String> ensureCatalogManaged(Map<String, String> properties) {
-        if (properties != null && properties.containsKey(CATALOG_MANAGED_KEY)) {
-            return properties;
-        }
+    private Map<String, String> ensureRequiredProperties(Map<String, String> properties) {
         Map<String, String> patched = new HashMap<>(properties != null ? properties : Map.of());
-        patched.put(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
+        patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
+        patched.putIfAbsent(PROVIDER_KEY, PROVIDER_DEFAULT);
         return patched;
     }
 
@@ -47,11 +46,10 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     public Table createTable(Identifier ident, Column[] columns, Transform[] partitions,
                              Map<String, String> properties) {
         try {
-            return super.createTable(ident, columns, partitions, ensureCatalogManaged(properties));
+            return super.createTable(ident, columns, partitions, ensureRequiredProperties(properties));
         } catch (AssertionError e) {
-            // UC v0.4.0 UCProxy.createTable(StructType) has assert(false) in the deprecated
-            // StructType overload. The table was already created via REST API by the Column[]
-            // overload before the assertion fired. Return the created table.
+            // Safety net: if an assertion in UCProxy still fires despite property injection,
+            // try loading the table in case it was partially created.
             try {
                 return loadTable(ident);
             } catch (Exception ex) {
@@ -69,7 +67,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     public Table createTable(Identifier ident, StructType schema, Transform[] partitions,
                              Map<String, String> properties) {
         try {
-            return super.createTable(ident, schema, partitions, ensureCatalogManaged(properties));
+            return super.createTable(ident, schema, partitions, ensureRequiredProperties(properties));
         } catch (AssertionError e) {
             try {
                 return loadTable(ident);
