@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Patched UCSingleCatalog that fixes two UC OSS v0.4.0 issues:
+ * Patched UCSingleCatalog that fixes three UC OSS v0.4.0 issues:
  *
  * 1. alterTable: UC stubs this with UnsupportedOperationException at every level.
  *    Spark 4.1.0 Declarative Pipelines DatasetManager calls it during table
@@ -21,6 +21,12 @@ import java.util.Map;
  * 2. createTable: UC requires 'delta.feature.catalogManaged'='supported' as a
  *    table property for managed tables. This patch injects it automatically so
  *    pipeline definitions don't need to specify it.
+ *
+ * 3. createTable assertion: UC v0.4.0 UCProxy.createTable(Column[]) creates the
+ *    table via REST API, then calls super.createTable which triggers the default
+ *    TableCatalog Column[]->StructType conversion. That dispatches back to
+ *    UCProxy.createTable(StructType) which has assert(false). We catch the
+ *    AssertionError and return the already-created table via loadTable.
  */
 public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
@@ -42,6 +48,15 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                              Map<String, String> properties) {
         try {
             return super.createTable(ident, columns, partitions, ensureCatalogManaged(properties));
+        } catch (AssertionError e) {
+            // UC v0.4.0 UCProxy.createTable(StructType) has assert(false) in the deprecated
+            // StructType overload. The table was already created via REST API by the Column[]
+            // overload before the assertion fired. Return the created table.
+            try {
+                return loadTable(ident);
+            } catch (Exception ex) {
+                throw new RuntimeException("createTable: assertion in UC and loadTable failed for " + ident, ex);
+            }
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -55,6 +70,12 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                              Map<String, String> properties) {
         try {
             return super.createTable(ident, schema, partitions, ensureCatalogManaged(properties));
+        } catch (AssertionError e) {
+            try {
+                return loadTable(ident);
+            } catch (Exception ex) {
+                throw new RuntimeException("createTable: assertion in UC and loadTable failed for " + ident, ex);
+            }
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
