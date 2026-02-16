@@ -1,0 +1,18 @@
+---
+# Run the UC Spark connector build and publish task
+# kubectl create -f tasks/uc-spark-taskrun.yaml
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: uc-spark-publish-
+  namespace: tekton-pipelines
+spec:
+  taskRef:
+    name: uc-spark-publish
+  params:
+    - name: uc-version
+      value: "v0.4.0"
+    - name: spark-version
+      value: "4.1.0"
+    - name: publish-version
+      value: "0.4.0-spark410"

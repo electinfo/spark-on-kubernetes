@@ -1,0 +1,107 @@
+---
+# Build Unity Catalog Spark connector from source against a specific Spark version
+# and publish to Nexus. Used when the upstream Maven Central artifact has binary
+# incompatibilities with our Spark runtime.
+#
+# Usage:
+#   kubectl apply -f tasks/uc-spark-publish.yaml
+#   kubectl create -f tasks/uc-spark-taskrun.yaml
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: uc-spark-publish
+  namespace: tekton-pipelines
+spec:
+  description: Build UC Spark connector from source against a target Spark version and publish to Nexus
+  params:
+    - name: uc-version
+      type: string
+      default: "v0.4.0"
+      description: Unity Catalog git tag to build
+    - name: spark-version
+      type: string
+      default: "4.1.0"
+      description: Spark version to compile against
+    - name: publish-version
+      type: string
+      default: "0.4.0-spark410"
+      description: Version string for published artifacts
+  results:
+    - name: client-artifact
+      description: Published client artifact coordinates
+    - name: spark-artifact
+      description: Published spark connector artifact coordinates
+  steps:
+    - name: build-and-publish
+      image: sbtscala/scala-sbt:eclipse-temurin-21.0.5_11_1.10.6_3.6.2
+      env:
+        - name: JAVA_OPTS
+          value: "-Xmx4g -Xms1g"
+        - name: IVY_HOME
+          value: /tmp/.ivy2
+        - name: NEXUS_USER
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: username
+        - name: NEXUS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: password
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "=== Installing git ==="
+        apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+
+        echo "=== Cloning Unity Catalog $(params.uc-version) ==="
+        git clone --depth 1 --branch $(params.uc-version) \
+          https://github.com/unitycatalog/unitycatalog.git /tmp/unitycatalog
+        cd /tmp/unitycatalog
+
+        echo "=== Patching sparkVersion to $(params.spark-version) ==="
+        sed -i 's/lazy val sparkVersion = "4.0.0"/lazy val sparkVersion = "$(params.spark-version)"/' build.sbt
+        grep "lazy val sparkVersion" build.sbt
+
+        echo "=== Setting version to $(params.publish-version) ==="
+        cat > version.sbt << 'VEOF'
+        ThisBuild / version := "$(params.publish-version)"
+        VEOF
+
+        echo "=== Adding Nexus publish settings ==="
+        cat >> build.sbt << 'PEOF'
+
+        // Electinfo Nexus publish settings
+        ThisBuild / publishTo := {
+          val nexus = "https://repo.elect.info/repository/"
+          if (isSnapshot.value)
+            Some("snapshots" at nexus + "maven-snapshots")
+          else
+            Some("releases" at nexus + "maven-releases")
+        }
+        ThisBuild / publishMavenStyle := true
+        PEOF
+
+        echo "=== Configuring Nexus credentials ==="
+        mkdir -p ~/.sbt/1.0
+        cat > ~/.sbt/1.0/credentials.sbt << EOF
+        credentials += Credentials(
+          "Sonatype Nexus Repository Manager",
+          "repo.elect.info",
+          "$NEXUS_USER",
+          "$NEXUS_PASSWORD"
+        )
+        EOF
+
+        echo "=== Building and publishing UC client + spark connector ==="
+        sbt -no-colors client/publish spark/publish
+
+        echo "=== Publish complete ==="
+        CLIENT="io.unitycatalog:unitycatalog-client:$(params.publish-version)"
+        SPARK="io.unitycatalog:unitycatalog-spark_2.13:$(params.publish-version)"
+        echo "Published: $CLIENT"
+        echo "Published: $SPARK"
+        echo -n "$CLIENT" > $(results.client-artifact.path)
+        echo -n "$SPARK" > $(results.spark-artifact.path)
