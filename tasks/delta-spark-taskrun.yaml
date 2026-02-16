@@ -1,0 +1,21 @@
+---
+# Run the delta-spark-publish task to build Delta Spark from source
+# against Spark 4.1.0 and publish to Nexus.
+#
+# Usage:
+#   kubectl create -f tasks/delta-spark-taskrun.yaml
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: delta-spark-publish-
+  namespace: tekton-pipelines
+spec:
+  taskRef:
+    name: delta-spark-publish
+  params:
+    - name: delta-branch
+      value: "master"
+    - name: spark-version
+      value: "4.1"
+    - name: publish-version
+      value: "4.1.0-spark410"

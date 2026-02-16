@@ -1,0 +1,136 @@
+---
+# Build Delta Spark from source against a specific Spark version and publish to Nexus.
+# Required because delta-spark 4.0.1 is compiled against Spark 4.0.x which uses a
+# Scala trait for LogKey. Spark 4.1.0 changed LogKey to a Java interface, breaking
+# binary compatibility (NoSuchMethodError: LogKey.$init$).
+#
+# Delta's master branch already has Spark 4.1 shims (LogKeyShims.scala) that handle
+# this change via DeltaLogKey abstract class instead of trait.
+#
+# Usage:
+#   kubectl apply -f tasks/delta-spark-publish.yaml
+#   kubectl create -f tasks/delta-spark-taskrun.yaml
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: delta-spark-publish
+  namespace: tekton-pipelines
+spec:
+  description: Build Delta Spark from source against a target Spark version and publish to Nexus
+  params:
+    - name: delta-branch
+      type: string
+      default: "master"
+      description: Delta Lake git branch to build
+    - name: spark-version
+      type: string
+      default: "4.1"
+      description: Spark version to compile against (short form, e.g. 4.1)
+    - name: publish-version
+      type: string
+      default: "4.1.0-spark410"
+      description: Version string for published artifacts
+  results:
+    - name: storage-artifact
+      description: Published delta-storage artifact coordinates
+    - name: spark-artifact
+      description: Published delta-spark artifact coordinates
+  steps:
+    - name: build-and-publish
+      image: sbtscala/scala-sbt:eclipse-temurin-21.0.5_11_1.10.6_3.6.2
+      env:
+        - name: JAVA_OPTS
+          value: "-Xmx6g -Xms2g"
+        - name: IVY_HOME
+          value: /tmp/.ivy2
+        - name: NEXUS_USER
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: username
+        - name: NEXUS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: password
+      computeResources:
+        requests:
+          memory: "8Gi"
+          cpu: "2"
+        limits:
+          memory: "10Gi"
+          cpu: "4"
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "=== Installing git ==="
+        apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
+
+        echo "=== Cloning Delta Lake $(params.delta-branch) ==="
+        git clone --depth 1 --branch $(params.delta-branch) \
+          https://github.com/delta-io/delta.git /tmp/delta
+        cd /tmp/delta
+
+        echo "=== Current version.sbt ==="
+        cat version.sbt
+
+        echo "=== Setting publish version to $(params.publish-version) ==="
+        cat > version.sbt << 'VEOF'
+        ThisBuild / version := "$(params.publish-version)"
+        VEOF
+
+        echo "=== Suppressing doc generation ==="
+        cat > doc-override.sbt << 'DEOF'
+        ThisBuild / Compile / doc / sources := Seq.empty
+        ThisBuild / packageDoc / publishArtifact := false
+        DEOF
+
+        echo "=== Overriding publishTo for all modules ==="
+        # Delta's releaseSettings set publishTo to Maven Central at project level.
+        # Override globally by creating a root-level .sbt that overrides publishTo.
+        NEXUS_RELEASES="https://repo.elect.info/repository/maven-releases/"
+        cat > publish-override.sbt << SEOF
+        ThisBuild / publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        ThisBuild / publishMavenStyle := true
+        SEOF
+
+        # Also override per-project for modules that set publishTo explicitly
+        for dir in storage spark-unified; do
+          if [ -d "$dir" ]; then
+            cat > "$dir/publish-override.sbt" << PEOF
+        publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        publishMavenStyle := true
+        PEOF
+          fi
+        done
+
+        echo "=== Configuring Nexus credentials ==="
+        mkdir -p ~/.sbt/1.0
+        cat > ~/.sbt/1.0/credentials.sbt << EOF
+        credentials += Credentials(
+          "Sonatype Nexus Repository Manager",
+          "repo.elect.info",
+          "$NEXUS_USER",
+          "$NEXUS_PASSWORD"
+        )
+        EOF
+
+        echo "=== Building delta-storage and delta-spark for Spark $(params.spark-version) ==="
+        # Use -DsparkVersion to select the Spark 4.1 build profile
+        # Build storage first (Java module, dependency of spark),
+        # then compile and publish spark
+        sbt -no-colors \
+          -DsparkVersion=$(params.spark-version) \
+          "storage/compile" \
+          "storage/publish" \
+          "spark/compile" \
+          "spark/publish"
+
+        echo "=== Publish complete ==="
+        STORAGE="io.delta:delta-storage:$(params.publish-version)"
+        SPARK="io.delta:delta-spark_2.13:$(params.publish-version)"
+        echo "Published: $STORAGE"
+        echo "Published: $SPARK"
+        echo -n "$STORAGE" > $(results.storage-artifact.path)
+        echo -n "$SPARK" > $(results.spark-artifact.path)
