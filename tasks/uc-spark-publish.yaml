@@ -73,19 +73,16 @@ spec:
         ThisBuild / packageDoc / publishArtifact := false
         VEOF
 
-        echo "=== Adding Nexus publish settings ==="
-        cat >> build.sbt << 'PEOF'
-
-        // Electinfo Nexus publish settings
-        ThisBuild / publishTo := {
-          val nexus = "https://repo.elect.info/repository/"
-          if (isSnapshot.value)
-            Some("snapshots" at nexus + "maven-snapshots")
-          else
-            Some("releases" at nexus + "maven-releases")
-        }
-        ThisBuild / publishMavenStyle := true
-        PEOF
+        echo "=== Overriding publish target per-project ==="
+        # UC release settings set publishTo at project level (Maven Central).
+        # Override with per-project .sbt files that SBT loads after build.sbt.
+        NEXUS_RELEASES="https://repo.elect.info/repository/maven-releases/"
+        for dir in clients/java connectors/spark; do
+          cat > "$dir/publish-override.sbt" << SEOF
+        publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        publishMavenStyle := true
+        SEOF
+        done
 
         echo "=== Configuring Nexus credentials ==="
         mkdir -p ~/.sbt/1.0
