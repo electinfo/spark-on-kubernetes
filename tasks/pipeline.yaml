@@ -137,20 +137,31 @@ spec:
       image: bitnami/kubectl:latest
       script: |
         #!/bin/sh
-        set -e
 
         echo "Refreshing Rundeck node cache..."
 
-        # Find Rundeck pod
-        RD_POD=$(kubectl get pods -n rundeck -l app.kubernetes.io/name=rundeck \
-          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -z "$RD_POD" ]; then
-          RD_POD=$(kubectl get pods -n rundeck -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+        # Wait for Rundeck pod to be ready (may have been restarted)
+        WAITED=0
+        MAX_WAIT=120
+        RD_POD=""
+        while [ $WAITED -lt $MAX_WAIT ]; do
+          RD_POD=$(kubectl get pods -n rundeck --field-selector=status.phase=Running \
+            -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null \
             | grep -m1 rundeck || echo "")
-        fi
+          if [ -n "$RD_POD" ]; then
+            READY=$(kubectl get pod "$RD_POD" -n rundeck \
+              -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+            if [ "$READY" = "True" ]; then
+              break
+            fi
+          fi
+          echo "  Waiting for Rundeck pod to be ready... (${WAITED}s)"
+          sleep 10
+          WAITED=$((WAITED + 10))
+        done
 
         if [ -z "$RD_POD" ]; then
-          echo "WARNING: Could not find Rundeck pod, skipping refresh"
+          echo "WARNING: Rundeck pod not ready after ${MAX_WAIT}s, skipping refresh"
           exit 0
         fi
         echo "Found Rundeck pod: $RD_POD"
