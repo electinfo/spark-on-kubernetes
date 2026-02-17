@@ -133,54 +133,41 @@ metadata:
 spec:
   description: Refresh Rundeck Kubernetes node cache after deployments restart
   steps:
-    - name: get-token
-      image: bitnami/kubectl:latest
-      volumeMounts:
-        - name: shared
-          mountPath: /shared
-      script: |
-        #!/bin/sh
-        set -e
-        kubectl get secret util-rundeck-env -n rundeck \
-          -o jsonpath='{.data.RD_TOKEN}' | base64 -d > /shared/rd-token
     - name: refresh
-      image: curlimages/curl:latest
-      volumeMounts:
-        - name: shared
-          mountPath: /shared
+      image: bitnami/kubectl:latest
       script: |
         #!/bin/sh
         set -e
 
-        RD_TOKEN=$(cat /shared/rd-token 2>/dev/null || echo "")
-        if [ -z "$RD_TOKEN" ]; then
-          echo "WARNING: Could not retrieve Rundeck API token, skipping refresh"
-          exit 0
+        echo "Refreshing Rundeck node cache..."
+
+        # Find Rundeck pod
+        RD_POD=$(kubectl get pods -n rundeck -l app.kubernetes.io/name=rundeck \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -z "$RD_POD" ]; then
+          RD_POD=$(kubectl get pods -n rundeck -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+            | grep -m1 rundeck || echo "")
         fi
 
-        RD_URL="https://rundeck.elect.info"
-        AUTH="X-Rundeck-Auth-Token: $RD_TOKEN"
+        if [ -z "$RD_POD" ]; then
+          echo "WARNING: Could not find Rundeck pod, skipping refresh"
+          exit 0
+        fi
+        echo "Found Rundeck pod: $RD_POD"
 
-        echo "Refreshing Rundeck node sources for project electinfo..."
+        # Use rd CLI inside the Rundeck pod to list nodes (forces cache refresh)
+        echo "Querying spark nodes to refresh cache..."
+        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+          rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
+        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+          rd nodes list -p electinfo -F "spark-connect" 2>&1 || true
 
-        # Trigger cache refresh for each source
-        for INDEX in 1 2 3; do
-          RESULT=$(curl -sk -X POST \
-            -H "Accept: application/json" -H "$AUTH" \
-            "$RD_URL/api/48/project/electinfo/source/$INDEX/resources" 2>&1) || true
-          echo "Source $INDEX refresh: $RESULT"
-        done
-
-        # Wait for cache to settle then verify
-        sleep 5
-        echo "Verifying spark-runner node..."
-        NODES=$(curl -sk -H "Accept: application/json" -H "$AUTH" \
-          "$RD_URL/api/48/project/electinfo/resources?filter=spark-runner" 2>&1) || true
-        echo "Current spark-runner nodes: $NODES"
+        # Brief wait then verify
+        sleep 3
+        echo "Current spark-runner nodes:"
+        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+          rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
         echo "Rundeck node refresh complete"
-  volumes:
-    - name: shared
-      emptyDir: {}
 ---
 apiVersion: tekton.dev/v1
 kind: Task
