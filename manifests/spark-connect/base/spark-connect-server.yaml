@@ -116,6 +116,9 @@ data:
     # Patched UC catalog JAR (loaded alongside spark.jars.packages for same classloader)
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
 
+    # Disable Hive metastore (UC is the sole catalog)
+    spark.sql.catalogImplementation                      in-memory
+
     # Unity Catalog
     spark.sql.defaultCatalog                             electinfo
     spark.sql.catalog.electinfo                          info.elect.spark.catalog.PatchedUCSingleCatalog
