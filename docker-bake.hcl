@@ -32,6 +32,8 @@ target "spark-base" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-base:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/spark-base:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-base:cache,mode=max"]
 }
 
 // Spark images - depend on spark-base
@@ -41,6 +43,8 @@ target "spark-executor" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-executor:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/spark-executor:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-executor:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -54,6 +58,8 @@ target "spark-driver" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-driver:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/spark-driver:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-driver:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -67,6 +73,8 @@ target "spark-connect-server" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-connect-server:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/spark-connect-server:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-connect-server:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -81,6 +89,8 @@ target "spark-runner" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/spark-runner:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/spark-runner:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-runner:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -95,6 +105,8 @@ target "zeppelin-server" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/zeppelin-server:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/zeppelin-server:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/zeppelin-server:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
@@ -108,6 +120,8 @@ target "zeppelin-interpreter" {
   dockerfile = "Dockerfile"
   tags = ["${REGISTRY}/electinfo/zeppelin-interpreter:${TAG}"]
   platforms = ["linux/amd64"]
+  cache-from = ["type=registry,ref=${REGISTRY}/electinfo/zeppelin-interpreter:cache"]
+  cache-to = ["type=registry,ref=${REGISTRY}/electinfo/zeppelin-interpreter:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
   }
