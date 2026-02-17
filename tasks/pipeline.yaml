@@ -168,15 +168,15 @@ spec:
 
         # Use rd CLI inside the Rundeck pod to list nodes (forces cache refresh)
         echo "Querying spark nodes to refresh cache..."
-        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+        kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
           rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
-        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+        kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
           rd nodes list -p electinfo -F "spark-connect" 2>&1 || true
 
         # Brief wait then verify
         sleep 3
         echo "Current spark-runner nodes:"
-        kubectl exec -n rundeck "$RD_POD" -c rundeck -- \
+        kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
           rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
         echo "Rundeck node refresh complete"
 ---
