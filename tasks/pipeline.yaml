@@ -166,18 +166,27 @@ spec:
         fi
         echo "Found Rundeck pod: $RD_POD"
 
-        # Use rd CLI inside the Rundeck pod to list nodes (forces cache refresh)
+        # Get a valid API token from the static tokens file
+        API_TOKEN=$(kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
+          sh -c "head -1 /home/rundeck/etc/tokens.properties | cut -d: -f2 | cut -d, -f1 | tr -d ' '" 2>/dev/null || echo "")
+
+        if [ -z "$API_TOKEN" ]; then
+          echo "WARNING: Could not read API token from tokens.properties"
+          exit 0
+        fi
+
+        # Use rd CLI with the valid token to list nodes (forces cache refresh)
         echo "Querying spark nodes to refresh cache..."
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
-          rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
+          sh -c "RD_TOKEN=$API_TOKEN rd nodes list -p electinfo -F 'spark-runner'" 2>&1 || true
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
-          rd nodes list -p electinfo -F "spark-connect" 2>&1 || true
+          sh -c "RD_TOKEN=$API_TOKEN rd nodes list -p electinfo -F 'spark-connect'" 2>&1 || true
 
         # Brief wait then verify
         sleep 3
         echo "Current spark-runner nodes:"
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
-          rd nodes list -p electinfo -F "spark-runner" 2>&1 || true
+          sh -c "RD_TOKEN=$API_TOKEN rd nodes list -p electinfo -F 'spark-runner'" 2>&1 || true
         echo "Rundeck node refresh complete"
 ---
 apiVersion: tekton.dev/v1
