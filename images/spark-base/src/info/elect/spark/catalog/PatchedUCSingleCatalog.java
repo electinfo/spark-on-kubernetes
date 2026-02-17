@@ -45,10 +45,8 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     private Map<String, String> ensureRequiredProperties(Map<String, String> properties) {
         Map<String, String> patched = new HashMap<>(properties != null ? properties : Map.of());
         patched.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
-        // Only inject catalogManaged for Delta tables
-        if ("delta".equalsIgnoreCase(patched.get(PROVIDER_KEY))) {
-            patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
-        }
+        // UC v0.4.0 requires catalogManaged for all managed tables, regardless of format
+        patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
         return patched;
     }
 
