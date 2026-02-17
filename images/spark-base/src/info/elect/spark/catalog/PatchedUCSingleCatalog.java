@@ -7,32 +7,53 @@ import org.apache.spark.sql.connector.catalog.Identifier;
 import org.apache.spark.sql.connector.catalog.Table;
 import org.apache.spark.sql.connector.catalog.TableChange;
 import org.apache.spark.sql.connector.expressions.Transform;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.util.CaseInsensitiveStringMap;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Patched UCSingleCatalog that fixes three UC OSS v0.4.0 issues:
+ * Patched UCSingleCatalog that fixes UC OSS v0.4.0 issues for Spark 4.1.0
+ * Declarative Pipelines:
  *
- * 1. alterTable: UC stubs this with UnsupportedOperationException at every level.
- *    Spark 4.1.0 Declarative Pipelines DatasetManager calls it during table
- *    materialization. This patch makes it a no-op that returns the current table.
+ * 1. alterTable: UC stubs this with UnsupportedOperationException.
+ *    Pipeline DatasetManager calls it during materialization.
+ *    Patched to return current table (no-op).
  *
- * 2. createTable missing properties: UCProxy.createTable(StructType) asserts that
- *    'provider' is non-null. The pipeline engine doesn't always include it in
- *    the properties map. This patch reads from spark.sql.sources.default.
- *    For Delta tables, also injects delta.feature.catalogManaged=supported.
+ * 2. createTable for Delta: Injects required properties (provider,
+ *    delta.feature.catalogManaged) that the pipeline engine omits.
  *
- * 3. createTable assertion safety net: If any assertion in UCProxy still fires
- *    (e.g. missing location), we catch AssertionError and attempt loadTable in case
- *    the table was partially created.
+ * 3. createTable for non-Delta: UCProxy rejects non-Delta managed tables.
+ *    Bypasses the connector entirely and creates EXTERNAL tables via the
+ *    UC REST API, enabling parquet/csv/json format support.
+ *
+ * 4. createTable assertion safety net: Catches AssertionError from UCProxy
+ *    and attempts loadTable as fallback.
  */
 public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
     private static final String CATALOG_MANAGED_KEY = "delta.feature.catalogManaged";
     private static final String CATALOG_MANAGED_VALUE = "supported";
     private static final String PROVIDER_KEY = "provider";
+
+    private String ucApiBase;
+    private String catalogName;
+
+    @Override
+    public void initialize(String name, CaseInsensitiveStringMap options) {
+        super.initialize(name, options);
+        this.catalogName = name;
+        String uri = options.get("uri");
+        if (uri != null) {
+            this.ucApiBase = uri + "/api/2.1/unity-catalog";
+        }
+    }
 
     private String getDefaultProvider() {
         try {
@@ -42,27 +63,182 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         }
     }
 
+    private boolean isDelta(Map<String, String> properties) {
+        String provider = properties.getOrDefault(PROVIDER_KEY, getDefaultProvider());
+        return "delta".equalsIgnoreCase(provider);
+    }
+
     private Map<String, String> ensureRequiredProperties(Map<String, String> properties) {
         Map<String, String> patched = new HashMap<>(properties != null ? properties : Map.of());
         patched.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
-        // UC v0.4.0 requires catalogManaged for all managed tables, regardless of format
+        // UC v0.4.0 requires catalogManaged for all managed tables
         patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
         return patched;
     }
+
+    // --- Non-Delta: create EXTERNAL table via UC REST API ---
+
+    private String getSchemaStorageRoot(String schemaName) {
+        try {
+            URL url = new URL(ucApiBase + "/schemas/" + catalogName + "." + schemaName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            if (conn.getResponseCode() == 200) {
+                String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                // Extract storage_root from JSON response
+                int idx = body.indexOf("\"storage_root\"");
+                if (idx >= 0) {
+                    int start = body.indexOf("\"", idx + 14) + 1;
+                    int end = body.indexOf("\"", start);
+                    return body.substring(start, end);
+                }
+            }
+        } catch (Exception e) {
+            // fall through to default
+        }
+        return "s3://hive-warehouse/" + schemaName;
+    }
+
+    private String escapeJson(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private String ucTypeName(String sparkSqlType) {
+        String upper = sparkSqlType.toUpperCase();
+        if (upper.startsWith("DECIMAL")) return "DECIMAL";
+        if (upper.startsWith("VARCHAR")) return "STRING";
+        if (upper.startsWith("CHAR")) return "STRING";
+        if (upper.startsWith("ARRAY")) return "ARRAY";
+        if (upper.startsWith("MAP")) return "MAP";
+        if (upper.startsWith("STRUCT")) return "STRUCT";
+        switch (upper) {
+            case "INT": case "INTEGER": return "INT";
+            case "BIGINT": case "LONG": return "LONG";
+            case "SMALLINT": case "SHORT": return "SHORT";
+            case "TINYINT": case "BYTE": return "BYTE";
+            case "FLOAT": case "REAL": return "FLOAT";
+            case "DOUBLE": return "DOUBLE";
+            case "STRING": return "STRING";
+            case "BOOLEAN": return "BOOLEAN";
+            case "DATE": return "DATE";
+            case "TIMESTAMP": return "TIMESTAMP";
+            case "TIMESTAMP_NTZ": return "TIMESTAMP_NTZ";
+            case "BINARY": return "BINARY";
+            default: return "STRING";
+        }
+    }
+
+    private String columnsToJson(Column[] columns) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < columns.length; i++) {
+            if (i > 0) sb.append(",");
+            String sqlType = columns[i].dataType().sql();
+            sb.append("{")
+              .append("\"name\":\"").append(escapeJson(columns[i].name())).append("\",")
+              .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
+              .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
+              .append("\"position\":").append(i).append(",")
+              .append("\"nullable\":").append(columns[i].nullable())
+              .append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private String structTypeToJson(StructType schema) {
+        StructField[] fields = schema.fields();
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < fields.length; i++) {
+            if (i > 0) sb.append(",");
+            String sqlType = fields[i].dataType().sql();
+            sb.append("{")
+              .append("\"name\":\"").append(escapeJson(fields[i].name())).append("\",")
+              .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
+              .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
+              .append("\"position\":").append(i).append(",")
+              .append("\"nullable\":").append(fields[i].nullable())
+              .append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private Table createExternalTable(Identifier ident, String columnsJson,
+                                      Map<String, String> properties) {
+        String schemaName = ident.namespace()[0];
+        String tableName = ident.name();
+        String provider = properties.getOrDefault(PROVIDER_KEY, "parquet");
+        String storageRoot = getSchemaStorageRoot(schemaName);
+        String location = storageRoot + "/" + tableName;
+
+        String body = "{" +
+            "\"name\":\"" + escapeJson(tableName) + "\"," +
+            "\"catalog_name\":\"" + escapeJson(catalogName) + "\"," +
+            "\"schema_name\":\"" + escapeJson(schemaName) + "\"," +
+            "\"table_type\":\"EXTERNAL\"," +
+            "\"data_source_format\":\"" + provider.toUpperCase() + "\"," +
+            "\"storage_location\":\"" + escapeJson(location) + "\"," +
+            "\"columns\":" + columnsJson +
+            "}";
+
+        try {
+            URL url = new URL(ucApiBase + "/tables");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body.getBytes(StandardCharsets.UTF_8));
+            }
+            int status = conn.getResponseCode();
+            if (status >= 400) {
+                String error = new String(
+                    conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+                // Table already exists — fine, load it
+                if (status == 409 || error.contains("already exists")) {
+                    return loadTable(ident);
+                }
+                throw new RuntimeException(
+                    "UC REST API createTable " + status + ": " + error);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create external table via UC API", e);
+        }
+
+        try {
+            return loadTable(ident);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "createTable: table created via API but loadTable failed for " + ident, e);
+        }
+    }
+
+    // --- createTable overrides ---
 
     @Override
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, Column[] columns, Transform[] partitions,
                              Map<String, String> properties) {
+        Map<String, String> patched = ensureRequiredProperties(properties);
+        if (!isDelta(patched)) {
+            return createExternalTable(ident, columnsToJson(columns), patched);
+        }
         try {
-            return super.createTable(ident, columns, partitions, ensureRequiredProperties(properties));
+            return super.createTable(ident, columns, partitions, patched);
         } catch (AssertionError e) {
-            // Safety net: if an assertion in UCProxy still fires despite property injection,
-            // try loading the table in case it was partially created.
             try {
                 return loadTable(ident);
             } catch (Exception ex) {
-                throw new RuntimeException("createTable: assertion in UC and loadTable failed for " + ident, ex);
+                throw new RuntimeException(
+                    "createTable: assertion in UC and loadTable failed for " + ident, ex);
             }
         } catch (RuntimeException e) {
             throw e;
@@ -75,13 +251,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, StructType schema, Transform[] partitions,
                              Map<String, String> properties) {
+        Map<String, String> patched = ensureRequiredProperties(properties);
+        if (!isDelta(patched)) {
+            return createExternalTable(ident, structTypeToJson(schema), patched);
+        }
         try {
-            return super.createTable(ident, schema, partitions, ensureRequiredProperties(properties));
+            return super.createTable(ident, schema, partitions, patched);
         } catch (AssertionError e) {
             try {
                 return loadTable(ident);
             } catch (Exception ex) {
-                throw new RuntimeException("createTable: assertion in UC and loadTable failed for " + ident, ex);
+                throw new RuntimeException(
+                    "createTable: assertion in UC and loadTable failed for " + ident, ex);
             }
         } catch (RuntimeException e) {
             throw e;
@@ -92,9 +273,6 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
     @Override
     public Table alterTable(Identifier ident, TableChange... changes) {
-        // UC OSS v0.4.0 doesn't support alterTable at any level.
-        // Return the current table unchanged — pipeline metadata properties
-        // won't be persisted to UC but the pipeline framework tracks them internally.
         try {
             return loadTable(ident);
         } catch (RuntimeException e) {
