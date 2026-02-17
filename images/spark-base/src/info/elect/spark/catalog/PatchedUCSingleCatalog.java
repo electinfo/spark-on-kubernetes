@@ -1,6 +1,7 @@
 package info.elect.spark.catalog;
 
 import io.unitycatalog.spark.UCSingleCatalog;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.connector.catalog.Column;
 import org.apache.spark.sql.connector.catalog.Identifier;
 import org.apache.spark.sql.connector.catalog.Table;
@@ -19,9 +20,9 @@ import java.util.Map;
  *    materialization. This patch makes it a no-op that returns the current table.
  *
  * 2. createTable missing properties: UCProxy.createTable(StructType) asserts that
- *    'provider' is non-null (line 478) and 'delta.feature.catalogManaged'='supported'
- *    is required for managed Delta tables. The pipeline engine doesn't always include
- *    these in the properties map. This patch injects them automatically.
+ *    'provider' is non-null. The pipeline engine doesn't always include it in
+ *    the properties map. This patch reads from spark.sql.sources.default.
+ *    For Delta tables, also injects delta.feature.catalogManaged=supported.
  *
  * 3. createTable assertion safety net: If any assertion in UCProxy still fires
  *    (e.g. missing location), we catch AssertionError and attempt loadTable in case
@@ -32,12 +33,22 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     private static final String CATALOG_MANAGED_KEY = "delta.feature.catalogManaged";
     private static final String CATALOG_MANAGED_VALUE = "supported";
     private static final String PROVIDER_KEY = "provider";
-    private static final String PROVIDER_DEFAULT = "delta";
+
+    private String getDefaultProvider() {
+        try {
+            return SparkSession.active().conf().get("spark.sql.sources.default");
+        } catch (Exception e) {
+            return "parquet";
+        }
+    }
 
     private Map<String, String> ensureRequiredProperties(Map<String, String> properties) {
         Map<String, String> patched = new HashMap<>(properties != null ? properties : Map.of());
-        patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
-        patched.putIfAbsent(PROVIDER_KEY, PROVIDER_DEFAULT);
+        patched.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
+        // Only inject catalogManaged for Delta tables
+        if ("delta".equalsIgnoreCase(patched.get(PROVIDER_KEY))) {
+            patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
+        }
         return patched;
     }
 

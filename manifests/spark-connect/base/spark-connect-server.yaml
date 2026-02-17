@@ -123,10 +123,7 @@ data:
     spark.sql.catalog.electinfo.token
     spark.sql.catalog.electinfo.renewCredential.enabled  false
 
-    # Delta Lake + S3 scheme mapping
-    spark.sql.sources.default                            delta
-    spark.sql.extensions                                 io.delta.sql.DeltaSparkSessionExtension
-    spark.sql.catalog.spark_catalog                      org.apache.spark.sql.delta.catalog.DeltaCatalog
+    # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
     # Kubernetes settings
