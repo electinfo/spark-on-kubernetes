@@ -113,6 +113,68 @@ spec:
           value: spark-runner
         - name: namespace
           value: spark
+
+  finally:
+    - name: refresh-rundeck-nodes
+      taskRef:
+        name: refresh-rundeck-nodes
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: refresh-rundeck-nodes
+  namespace: tekton-pipelines
+spec:
+  description: Refresh Rundeck Kubernetes node cache after deployments restart
+  steps:
+    - name: refresh
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        # Get Rundeck API token from its secret
+        RD_TOKEN=$(kubectl get secret util-rundeck-env -n rundeck \
+          -o jsonpath='{.data.RD_TOKEN}' | base64 -d)
+
+        if [ -z "$RD_TOKEN" ]; then
+          echo "WARNING: Could not retrieve Rundeck API token, skipping refresh"
+          exit 0
+        fi
+
+        RD_URL="https://rundeck.elect.info"
+
+        echo "Refreshing Rundeck node sources for project electinfo..."
+
+        # Get resource model sources
+        SOURCES=$(wget -q -O - \
+          --header="Accept: application/json" \
+          --header="X-Rundeck-Auth-Token: $RD_TOKEN" \
+          "$RD_URL/api/48/project/electinfo/sources" 2>&1) || true
+
+        if echo "$SOURCES" | grep -q "error"; then
+          echo "WARNING: Could not list sources: $SOURCES"
+          echo "Falling back to cache-refresh endpoint..."
+        fi
+
+        # Trigger cache refresh for each source
+        for INDEX in 1 2 3; do
+          RESULT=$(wget -q -O - --method=POST \
+            --header="Accept: application/json" \
+            --header="X-Rundeck-Auth-Token: $RD_TOKEN" \
+            "$RD_URL/api/48/project/electinfo/source/$INDEX/resources" 2>&1) || true
+          echo "Source $INDEX refresh: $RESULT"
+        done
+
+        # Wait for cache to settle then verify
+        sleep 5
+        echo "Verifying spark-runner node..."
+        NODES=$(wget -q -O - \
+          --header="Accept: application/json" \
+          --header="X-Rundeck-Auth-Token: $RD_TOKEN" \
+          "$RD_URL/api/48/project/electinfo/resources?filter=spark-runner" 2>&1) || true
+        echo "Current spark-runner nodes: $NODES"
+        echo "Rundeck node refresh complete"
 ---
 apiVersion: tekton.dev/v1
 kind: Task
