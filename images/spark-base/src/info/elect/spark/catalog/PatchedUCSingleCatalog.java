@@ -111,6 +111,15 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         }
     }
 
+    private String typeJson(String name, String sqlType, boolean nullable) {
+        // Spark-style JSON schema: {"name":"col","type":"string","nullable":true,"metadata":{}}
+        String sparkType = sqlType.toLowerCase();
+        return "{\\\"name\\\":\\\"" + escapeJson(name) +
+               "\\\",\\\"type\\\":\\\"" + escapeJson(sparkType) +
+               "\\\",\\\"nullable\\\":" + nullable +
+               ",\\\"metadata\\\":{}}";
+    }
+
     private String columnsToJson(Column[] columns) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < columns.length; i++) {
@@ -119,6 +128,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             sb.append("{")
               .append("\"name\":\"").append(escapeJson(columns[i].name())).append("\",")
               .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
+              .append("\"type_json\":\"").append(typeJson(columns[i].name(), sqlType, columns[i].nullable())).append("\",")
               .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
               .append("\"position\":").append(i).append(",")
               .append("\"nullable\":").append(columns[i].nullable())
@@ -137,6 +147,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             sb.append("{")
               .append("\"name\":\"").append(escapeJson(fields[i].name())).append("\",")
               .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
+              .append("\"type_json\":\"").append(typeJson(fields[i].name(), sqlType, fields[i].nullable())).append("\",")
               .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
               .append("\"position\":").append(i).append(",")
               .append("\"nullable\":").append(fields[i].nullable())
