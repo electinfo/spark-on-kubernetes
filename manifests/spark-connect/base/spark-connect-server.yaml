@@ -148,13 +148,6 @@ data:
     spark.dynamicAllocation.maxExecutors                 1
     spark.dynamicAllocation.executorIdleTimeout          120s
 
-    # Hive metastore
-    spark.sql.catalogImplementation                      hive
-    spark.sql.hive.metastore.version                     4.1.0
-    spark.sql.hive.metastore.jars                        maven
-    spark.hadoop.hive.metastore.uris                     thrift://app-hive.electinfo.svc.cluster.local:9083
-    spark.sql.warehouse.dir                              s3a://hive-warehouse/
-
     # Event logging
     spark.eventLog.enabled                               true
     spark.eventLog.dir                                   s3a://spark-history/
