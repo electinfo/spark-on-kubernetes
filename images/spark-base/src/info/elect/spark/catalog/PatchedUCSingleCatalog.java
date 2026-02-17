@@ -26,20 +26,14 @@ import java.util.Map;
  *    Pipeline DatasetManager calls it during materialization.
  *    Patched to return current table (no-op).
  *
- * 2. createTable for Delta: Injects required properties (provider,
- *    delta.feature.catalogManaged) that the pipeline engine omits.
- *
- * 3. createTable for non-Delta: UCProxy rejects non-Delta managed tables.
- *    Bypasses the connector entirely and creates EXTERNAL tables via the
- *    UC REST API, enabling parquet/csv/json format support.
- *
- * 4. createTable assertion safety net: Catches AssertionError from UCProxy
- *    and attempts loadTable as fallback.
+ * 2. createTable: Bypasses UCProxy entirely and creates all tables as
+ *    EXTERNAL via the UC REST API with deterministic storage paths
+ *    ({storage_root}/{table_name}). This avoids UC managed table storage
+ *    (__unitystorage/) which DLP doesn't reliably write to, and supports
+ *    any format (delta, parquet, csv, json).
  */
 public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
-    private static final String CATALOG_MANAGED_KEY = "delta.feature.catalogManaged";
-    private static final String CATALOG_MANAGED_VALUE = "supported";
     private static final String PROVIDER_KEY = "provider";
 
     private String ucApiBase;
@@ -63,20 +57,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         }
     }
 
-    private boolean isDelta(Map<String, String> properties) {
-        String provider = properties.getOrDefault(PROVIDER_KEY, getDefaultProvider());
-        return "delta".equalsIgnoreCase(provider);
-    }
-
-    private Map<String, String> ensureRequiredProperties(Map<String, String> properties) {
-        Map<String, String> patched = new HashMap<>(properties != null ? properties : Map.of());
-        patched.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
-        // UC v0.4.0 requires catalogManaged for all managed tables
-        patched.putIfAbsent(CATALOG_MANAGED_KEY, CATALOG_MANAGED_VALUE);
-        return patched;
-    }
-
-    // --- Non-Delta: create EXTERNAL table via UC REST API ---
+    // --- Create EXTERNAL table via UC REST API ---
 
     private String getSchemaStorageRoot(String schemaName) {
         try {
@@ -227,48 +208,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, Column[] columns, Transform[] partitions,
                              Map<String, String> properties) {
-        Map<String, String> patched = ensureRequiredProperties(properties);
-        if (!isDelta(patched)) {
-            return createExternalTable(ident, columnsToJson(columns), patched);
-        }
-        try {
-            return super.createTable(ident, columns, partitions, patched);
-        } catch (AssertionError e) {
-            try {
-                return loadTable(ident);
-            } catch (Exception ex) {
-                throw new RuntimeException(
-                    "createTable: assertion in UC and loadTable failed for " + ident, ex);
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("createTable failed", e);
-        }
+        Map<String, String> props = new HashMap<>(properties != null ? properties : Map.of());
+        props.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
+        return createExternalTable(ident, columnsToJson(columns), props);
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, StructType schema, Transform[] partitions,
                              Map<String, String> properties) {
-        Map<String, String> patched = ensureRequiredProperties(properties);
-        if (!isDelta(patched)) {
-            return createExternalTable(ident, structTypeToJson(schema), patched);
-        }
-        try {
-            return super.createTable(ident, schema, partitions, patched);
-        } catch (AssertionError e) {
-            try {
-                return loadTable(ident);
-            } catch (Exception ex) {
-                throw new RuntimeException(
-                    "createTable: assertion in UC and loadTable failed for " + ident, ex);
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("createTable failed", e);
-        }
+        Map<String, String> props = new HashMap<>(properties != null ? properties : Map.of());
+        props.putIfAbsent(PROVIDER_KEY, getDefaultProvider());
+        return createExternalTable(ident, structTypeToJson(schema), props);
     }
 
     @Override
