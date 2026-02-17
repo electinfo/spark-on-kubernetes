@@ -120,7 +120,7 @@ data:
     spark.sql.defaultCatalog                             electinfo
     spark.sql.catalog.electinfo                          info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.electinfo.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
-    spark.sql.catalog.electinfo.token
+    spark.sql.catalog.electinfo.token                    eyJraWQiOiIxZTgxNjQzOTAyMmMzYWQwZGM5OWM3ODVjN2ZlZTE3NDZkNmZiZjZkNTUzZTA2ZjhhZGY1NjI5MGEyODI1NGZlIiwiYWxnIjoiUlM1MTIiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJhZG1pbiIsImlzcyI6ImludGVybmFsIiwiaWF0IjoxNzcxMjg3MDE1LCJqdGkiOiJiNGUwY2M5ZS04NzBiLTRlNDctOGM5OC0xOWZmZjQyYWIzNTEiLCJ0eXBlIjoiU0VSVklDRSJ9.Wxkx02kQZsj9YmiUfWKiQ8pOmcO9OrT9a5OtG6ZDHduMG_eQWhMYy8wrAx09R4ljVkxmZavrPDynjaRhhSFaRSOkhrsu4MMPZhvjfmNNmAA5XkrRqoKzyPEOv3GgDrlObL9qW4Orb2ZPJ-DGbqQmkBpApY8fHhVur250whQ9CxSTMP7KO8AWlx9UPCbsgqCBAafbx7LeGLYU-nEOC6laH-F0HpEvdaiuSTBlZf4rIHeBUHbg4ZmcXY7SziuWF3ZG4gNwiy7GZ4tKAH2knouNrGDuwPkB7ZtApEpP8VdBV1kYwZaSmaMLodwF-NBzTSfmwRwj24cBAj0jQqYTlxP8Hg
     spark.sql.catalog.electinfo.renewCredential.enabled  false
 
     # Delta Lake + S3 scheme mapping
