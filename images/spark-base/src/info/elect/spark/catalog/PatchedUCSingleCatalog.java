@@ -60,6 +60,51 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         }
     }
 
+    // --- UC REST API helpers ---
+
+    private String getTableFormat(String schemaName, String tableName) {
+        try {
+            String fullName = catalogName + "." + schemaName + "." + tableName;
+            URL url = new URL(ucApiBase + "/tables/" + fullName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            if (conn.getResponseCode() == 200) {
+                String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                int idx = body.indexOf("\"data_source_format\"");
+                if (idx >= 0) {
+                    int start = body.indexOf("\"", idx + 20) + 1;
+                    int end = body.indexOf("\"", start);
+                    return body.substring(start, end);
+                }
+            }
+        } catch (Exception e) {
+            // fall through
+        }
+        return null;
+    }
+
+    private void deleteTable(String schemaName, String tableName) {
+        try {
+            String fullName = catalogName + "." + schemaName + "." + tableName;
+            URL url = new URL(ucApiBase + "/tables/" + fullName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            int status = conn.getResponseCode();
+            if (status >= 400 && status != 404) {
+                String error = new String(
+                    conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+                System.err.println("WARN: deleteTable " + fullName + " returned " +
+                    status + ": " + error);
+            }
+        } catch (Exception e) {
+            System.err.println("WARN: deleteTable failed: " + e.getMessage());
+        }
+    }
+
     // --- Create EXTERNAL table via UC REST API ---
 
     private String getSchemaStorageRoot(String schemaName) {
@@ -198,8 +243,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             if (status >= 400) {
                 String error = new String(
                     conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-                // Table already exists — fine, load it
+                // Table already exists — check format matches
                 if (status == 409 || error.contains("already exists")) {
+                    String existingFormat = getTableFormat(schemaName, tableName);
+                    if (existingFormat != null &&
+                            !existingFormat.equalsIgnoreCase(provider)) {
+                        // Format mismatch: drop and recreate
+                        System.out.println("PatchedUCSingleCatalog: Format mismatch for " +
+                            schemaName + "." + tableName + " (existing=" + existingFormat +
+                            ", requested=" + provider.toUpperCase() + "). Dropping and recreating.");
+                        deleteTable(schemaName, tableName);
+                        return createExternalTable(ident, columnsJson, properties);
+                    }
                     return loadTable(ident);
                 }
                 throw new RuntimeException(
