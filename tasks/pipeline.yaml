@@ -121,9 +121,86 @@ spec:
           value: util-spark-runner
 
   finally:
+    - name: wait-argocd-stable
+      taskRef:
+        name: wait-argocd-apps-healthy
+      params:
+        - name: apps
+          value: "app-spark-connect util-spark-runner app-zeppelin"
+
     - name: refresh-rundeck-nodes
+      runAfter:
+        - wait-argocd-stable
       taskRef:
         name: refresh-rundeck-nodes
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: wait-argocd-apps-healthy
+  namespace: tekton-pipelines
+spec:
+  description: Wait for ArgoCD applications to reach Synced+Healthy after builds
+  params:
+    - name: apps
+      type: string
+      description: Space-separated list of ArgoCD application names
+    - name: timeout
+      type: string
+      default: "300"
+      description: Max seconds to wait per app
+  steps:
+    - name: wait
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+        APPS="$(params.apps)"
+        TIMEOUT="$(params.timeout)"
+
+        for APP in $APPS; do
+          echo "Waiting for ArgoCD app '$APP' to be Synced+Healthy..."
+          WAITED=0
+          while [ $WAITED -lt $TIMEOUT ]; do
+            SYNC=$(kubectl get application/$APP -n argocd \
+              -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "unknown")
+            HEALTH=$(kubectl get application/$APP -n argocd \
+              -o jsonpath='{.status.health.status}' 2>/dev/null || echo "unknown")
+
+            if [ "$SYNC" = "Synced" ] && [ "$HEALTH" = "Healthy" ]; then
+              echo "  $APP: Synced+Healthy (${WAITED}s)"
+              break
+            fi
+
+            echo "  $APP: sync=$SYNC health=$HEALTH (${WAITED}s)"
+            sleep 10
+            WAITED=$((WAITED + 10))
+          done
+
+          if [ $WAITED -ge $TIMEOUT ]; then
+            echo "WARNING: $APP did not reach Synced+Healthy within ${TIMEOUT}s"
+          fi
+
+          # After ArgoCD says healthy, also verify the actual rollout
+          # Extract deployment name from ArgoCD app status
+          DEPLOY=""
+          NS=""
+          case "$APP" in
+            app-spark-connect)
+              DEPLOY="spark-connect-server"; NS="spark" ;;
+            util-spark-runner)
+              DEPLOY="spark-runner"; NS="spark" ;;
+            app-zeppelin)
+              DEPLOY="zeppelin-server"; NS="zeppelin" ;;
+          esac
+
+          if [ -n "$DEPLOY" ]; then
+            echo "  Verifying rollout status for $DEPLOY in $NS..."
+            kubectl rollout status deployment/$DEPLOY -n $NS --timeout=120s 2>&1 || true
+          fi
+        done
+
+        echo "All ArgoCD apps stable"
 ---
 apiVersion: tekton.dev/v1
 kind: Task
