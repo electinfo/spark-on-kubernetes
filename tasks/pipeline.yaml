@@ -121,42 +121,25 @@ spec:
           value: util-spark-runner
 
   finally:
-    - name: wait-argocd-stable
+    - name: stabilize-and-refresh
       taskRef:
-        name: wait-argocd-apps-healthy
-      params:
-        - name: apps
-          value: "app-spark-connect util-spark-runner app-zeppelin"
-
-    - name: refresh-rundeck-nodes
-      runAfter:
-        - wait-argocd-stable
-      taskRef:
-        name: refresh-rundeck-nodes
+        name: stabilize-and-refresh-nodes
 ---
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: wait-argocd-apps-healthy
+  name: stabilize-and-refresh-nodes
   namespace: tekton-pipelines
 spec:
-  description: Wait for ArgoCD applications to reach Synced+Healthy after builds
-  params:
-    - name: apps
-      type: string
-      description: Space-separated list of ArgoCD application names
-    - name: timeout
-      type: string
-      default: "300"
-      description: Max seconds to wait per app
+  description: Wait for ArgoCD apps to stabilize, then refresh Rundeck node cache
   steps:
-    - name: wait
+    - name: wait-argocd
       image: bitnami/kubectl:latest
       script: |
         #!/bin/sh
         set -e
-        APPS="$(params.apps)"
-        TIMEOUT="$(params.timeout)"
+        APPS="app-spark-connect util-spark-runner app-zeppelin"
+        TIMEOUT=300
 
         for APP in $APPS; do
           echo "Waiting for ArgoCD app '$APP' to be Synced+Healthy..."
@@ -181,8 +164,7 @@ spec:
             echo "WARNING: $APP did not reach Synced+Healthy within ${TIMEOUT}s"
           fi
 
-          # After ArgoCD says healthy, also verify the actual rollout
-          # Extract deployment name from ArgoCD app status
+          # Verify the actual rollout after ArgoCD reports healthy
           DEPLOY=""
           NS=""
           case "$APP" in
@@ -201,23 +183,15 @@ spec:
         done
 
         echo "All ArgoCD apps stable"
----
-apiVersion: tekton.dev/v1
-kind: Task
-metadata:
-  name: refresh-rundeck-nodes
-  namespace: tekton-pipelines
-spec:
-  description: Refresh Rundeck Kubernetes node cache after deployments restart
-  steps:
-    - name: refresh
+
+    - name: refresh-rundeck
       image: bitnami/kubectl:latest
       script: |
         #!/bin/sh
 
         echo "Refreshing Rundeck node cache..."
 
-        # Wait for Rundeck pod to be ready (may have been restarted)
+        # Wait for Rundeck pod to be ready
         WAITED=0
         MAX_WAIT=120
         RD_POD=""
@@ -252,14 +226,13 @@ spec:
           exit 0
         fi
 
-        # Use rd CLI with the valid token to list nodes (forces cache refresh)
+        # Force node cache refresh
         echo "Querying spark nodes to refresh cache..."
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
           sh -c "RD_TOKEN=$API_TOKEN rd nodes list -p electinfo -F 'spark-runner'" 2>&1 || true
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
           sh -c "RD_TOKEN=$API_TOKEN rd nodes list -p electinfo -F 'spark-connect'" 2>&1 || true
 
-        # Brief wait then verify
         sleep 3
         echo "Current spark-runner nodes:"
         kubectl exec -n rundeck "$RD_POD" -c util-rundeck -- \
