@@ -164,6 +164,11 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                                       Map<String, String> properties) {
         String schemaName = ident.namespace()[0];
         String tableName = ident.name();
+
+        // Ensure the V1 SessionCatalog has this schema.
+        // CreateDataSourceTableAsSelectCommand validates via V1's requireDbExists(),
+        // which doesn't know about V2 catalog schemas.
+        org.apache.spark.sql.V1CatalogSync.ensureSchemaExists(schemaName);
         String provider = properties.getOrDefault(PROVIDER_KEY, "parquet");
         String storageRoot = getSchemaStorageRoot(schemaName);
         String location = storageRoot + "/" + tableName;
