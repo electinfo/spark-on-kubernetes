@@ -54,7 +54,8 @@ spec:
                 --conf spark.sql.catalogImplementation=in-memory \
                 --conf spark.sql.catalog.spark_catalog=info.elect.spark.catalog.PatchedUCSingleCatalog \
                 --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
-                --conf spark.sql.catalog.spark_catalog.token=
+                --conf spark.sql.catalog.spark_catalog.token= \
+                --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo
           env:
             - name: POD_IP
               valueFrom:

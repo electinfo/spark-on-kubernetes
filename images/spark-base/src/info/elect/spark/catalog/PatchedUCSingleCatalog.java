@@ -41,8 +41,11 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
     @Override
     public void initialize(String name, CaseInsensitiveStringMap options) {
-        super.initialize(name, options);
-        this.catalogName = name;
+        // When used as spark_catalog, delegate to UC's "electinfo" catalog
+        String ucCatalogName = options.containsKey("uc-catalog")
+            ? options.get("uc-catalog") : name;
+        super.initialize(ucCatalogName, options);
+        this.catalogName = ucCatalogName;
         String uri = options.get("uri");
         if (uri != null) {
             this.ucApiBase = uri + "/api/2.1/unity-catalog";
