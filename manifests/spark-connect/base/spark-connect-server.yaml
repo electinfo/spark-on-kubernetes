@@ -50,7 +50,8 @@ spec:
                 --deploy-mode client \
                 --name spark-connect-server \
                 --properties-file /opt/spark/conf/spark-defaults.conf \
-                --conf spark.driver.host=$POD_IP
+                --conf spark.driver.host=$POD_IP \
+                --conf spark.sql.catalogImplementation=in-memory
           env:
             - name: POD_IP
               valueFrom:
