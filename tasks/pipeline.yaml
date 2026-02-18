@@ -417,7 +417,7 @@ spec:
         # Build all targets with a single bake command
         TARGETS="$(params.targets)"
         echo "=== Building targets: $TARGETS ==="
-        docker buildx bake --file docker-bake.hcl --push $TARGETS
+        docker buildx bake --file docker-bake.hcl --push --provenance=false $TARGETS
 
         echo "Build complete!"
       volumeMounts:
