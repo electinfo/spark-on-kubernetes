@@ -51,7 +51,10 @@ spec:
                 --name spark-connect-server \
                 --properties-file /opt/spark/conf/spark-defaults.conf \
                 --conf spark.driver.host=$POD_IP \
-                --conf spark.sql.catalogImplementation=in-memory
+                --conf spark.sql.catalogImplementation=in-memory \
+                --conf spark.sql.catalog.spark_catalog=info.elect.spark.catalog.PatchedUCSingleCatalog \
+                --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
+                --conf spark.sql.catalog.spark_catalog.token=
           env:
             - name: POD_IP
               valueFrom:
