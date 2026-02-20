@@ -55,7 +55,8 @@ spec:
                 --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
                 --conf spark.sql.catalog.spark_catalog.token= \
                 --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo \
-                --conf spark.executor.extraClassPath=/opt/spark/work-dir/*
+                --conf spark.executor.extraClassPath=/opt/spark/work-dir/* \
+                --hiveconf hive.server2.authentication=NOSASL
           env:
             - name: POD_IP
               valueFrom:
