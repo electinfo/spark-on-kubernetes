@@ -47,6 +47,7 @@ spec:
                 --master k8s://https://kubernetes.default.svc:443 \
                 --deploy-mode client \
                 --name spark-thrift-server \
+                --driver-class-path "/opt/spark/custom-jars/*" \
                 --properties-file /opt/spark/conf/spark-defaults.conf \
                 --conf spark.driver.host=$POD_IP \
                 --conf spark.ui.port=4041 \
