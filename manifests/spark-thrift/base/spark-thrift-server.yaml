@@ -1,0 +1,231 @@
+# Spark Thrift Server - HiveServer2-compatible SQL endpoint backed by Unity Catalog
+#
+# Provides a persistent Spark SQL endpoint that Superset (and other BI tools) can
+# connect to via PyHive/JDBC using the HiveServer2 protocol.
+#
+# Connection string: hive://spark-thrift.spark.svc.cluster.local:10000/electinfo?auth=NOSASL
+#
+# Deploy:  kubectl apply -k manifests/spark-thrift/base/
+# Check:   kubectl get pods -n spark -l app=spark-thrift-server
+# Logs:    kubectl logs -n spark -l app=spark-thrift-server
+# Test:    beeline -u jdbc:hive2://spark-thrift.spark.svc.cluster.local:10000
+#
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-thrift-server
+  namespace: spark
+  labels:
+    app: spark-thrift-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-thrift-server
+  template:
+    metadata:
+      labels:
+        app: spark-thrift-server
+    spec:
+      serviceAccountName: spark-operator-spark
+      nodeSelector:
+        kubernetes.io/hostname: cyberpower
+      containers:
+        - name: spark-thrift
+          image: localhost:32000/electinfo/spark-connect-server:latest
+          imagePullPolicy: Always
+          command:
+            - /bin/bash
+            - -c
+            - |
+              # Create Ivy cache directory (spark user home is /nonexistent in /etc/passwd)
+              mkdir -p /nonexistent/.ivy2.5.2/cache /nonexistent/.ivy2.5.2/jars
+
+              # Start Spark Thrift Server (HiveServer2 protocol on port 10000)
+              exec /opt/spark/sbin/start-thriftserver.sh \
+                --master k8s://https://kubernetes.default.svc:443 \
+                --deploy-mode client \
+                --name spark-thrift-server \
+                --properties-file /opt/spark/conf/spark-defaults.conf \
+                --conf spark.driver.host=$POD_IP \
+                --conf spark.ui.port=4041 \
+                --conf spark.sql.catalogImplementation=in-memory \
+                --conf spark.sql.catalog.spark_catalog=info.elect.spark.catalog.PatchedUCSingleCatalog \
+                --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
+                --conf spark.sql.catalog.spark_catalog.token= \
+                --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo \
+                --conf spark.executor.extraClassPath=/opt/spark/work-dir/*
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SPARK_NO_DAEMONIZE
+              value: "true"
+          ports:
+            - name: thrift
+              containerPort: 10000
+              protocol: TCP
+            - name: spark-ui
+              containerPort: 4041
+              protocol: TCP
+            - name: driver-rpc
+              containerPort: 7078
+              protocol: TCP
+            - name: block-manager
+              containerPort: 7079
+              protocol: TCP
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          volumeMounts:
+            - name: spark-conf
+              mountPath: /opt/spark/conf
+            - name: ivy-cache
+              mountPath: /nonexistent
+            - name: spark-local
+              mountPath: /tmp/spark-local
+      volumes:
+        - name: spark-conf
+          configMap:
+            name: spark-thrift-config
+        - name: ivy-cache
+          emptyDir: {}
+        - name: spark-local
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-thrift-config
+  namespace: spark
+data:
+  spark-defaults.conf: |
+    # Spark Thrift Server configuration
+    # Tuned for BI workloads (Superset dashboards, interactive SQL)
+
+    # Prometheus metrics
+    spark.ui.prometheus.enabled                          true
+    spark.metrics.conf                                   /opt/spark/conf/metrics.properties
+
+    # Maven packages
+    spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410
+    spark.jars.repositories                               https://repo.elect.info/repository/maven-public/
+    spark.jars.ivy                                       /nonexistent/.ivy2.5.2
+    spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
+
+    # Disable Hive metastore (UC is the sole catalog)
+    spark.sql.catalogImplementation                      in-memory
+
+    # Unity Catalog
+    spark.sql.defaultCatalog                             electinfo
+    spark.sql.catalog.electinfo                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.electinfo.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.electinfo.token
+    spark.sql.catalog.electinfo.renewCredential.enabled  false
+
+    # S3 scheme mapping
+    spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
+
+    # Kubernetes settings
+    spark.kubernetes.container.image                     localhost:32000/electinfo/spark-executor:latest
+    spark.kubernetes.namespace                           spark
+    spark.kubernetes.authenticate.driver.serviceAccountName spark-operator-spark
+    spark.kubernetes.executor.podTemplateFile            /opt/spark/conf/executor-pod-template.yaml
+    spark.kubernetes.file.upload.path                    /tmp/spark-uploads
+
+    # Executor settings — lighter than pipeline workloads
+    spark.executor.cores                                 4
+    spark.executor.memory                                16g
+    spark.driver.memory                                  4g
+    spark.executor.extraClassPath                        /opt/spark/work-dir/*
+
+    # Dynamic allocation — BI workloads are bursty (idle most of the time)
+    spark.dynamicAllocation.enabled                      true
+    spark.dynamicAllocation.shuffleTracking.enabled      true
+    spark.dynamicAllocation.minExecutors                 0
+    spark.dynamicAllocation.maxExecutors                 3
+    spark.dynamicAllocation.initialExecutors             1
+    spark.dynamicAllocation.executorIdleTimeout          120s
+    spark.dynamicAllocation.schedulerBacklogTimeout      5s
+
+    # Thrift Server settings
+    spark.sql.thriftserver.scheduler.pool                FAIR
+    spark.sql.hive.thriftServer.singleSession            false
+
+    # Event logging
+    spark.eventLog.enabled                               true
+    spark.eventLog.dir                                   s3a://spark-history/
+
+    # S3A configuration for MinIO
+    spark.hadoop.fs.s3a.endpoint                         http://10.10.0.10:9000
+    spark.hadoop.fs.s3a.path.style.access                true
+    spark.hadoop.fs.s3a.impl                             org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.connection.ssl.enabled           false
+    spark.hadoop.fs.s3a.access.key                       electinfo
+    spark.hadoop.fs.s3a.secret.key                       electinfo123
+    spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    spark.hadoop.fs.s3a.change.detection.mode            none
+    spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
+
+  metrics.properties: |
+    # Enable Prometheus metrics export
+    *.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+    *.sink.prometheusServlet.path=/metrics/prometheus
+    master.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+    worker.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+    driver.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+    executor.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+
+  executor-pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: spark-kubernetes-executor
+          volumeMounts:
+            - name: spark-local
+              mountPath: /tmp/spark-local
+      volumes:
+        - name: spark-local
+          emptyDir:
+            sizeLimit: 10Gi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    spark-app-name: spark-thrift-server
+                topologyKey: kubernetes.io/hostname
+
+---
+# Service to expose Thrift endpoint (ClusterIP — only Superset needs access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-thrift
+  namespace: spark
+  labels:
+    app: spark-thrift-server
+spec:
+  type: ClusterIP
+  selector:
+    app: spark-thrift-server
+  ports:
+    - name: thrift
+      port: 10000
+      targetPort: 10000
+      protocol: TCP
+    - name: spark-ui
+      port: 4041
+      targetPort: 4041
+      protocol: TCP
