@@ -44,31 +44,6 @@ spec:
               # Create Ivy cache directory (spark user home is /nonexistent in /etc/passwd)
               mkdir -p /nonexistent/.ivy2.5.2/cache /nonexistent/.ivy2.5.2/jars
 
-              # Pre-resolve Maven packages into Ivy cache so we can copy
-              # UC catalog JARs to the system classpath before starting.
-              # The Declarative Pipeline framework creates tables via UC and
-              # Hadoop's FileSystem needs AwsVendedTokenProvider on the system
-              # classloader (not Spark's child MutableURLClassLoader).
-              PACKAGES="org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410"
-              REPOS="https://repo.elect.info/repository/maven-public/"
-
-              echo "Pre-resolving Maven packages..."
-              /opt/spark/bin/spark-submit \
-                --packages "$PACKAGES" \
-                --repositories "$REPOS" \
-                --conf spark.jars.ivy=/nonexistent/.ivy2.5.2 \
-                --class PreResolveOnly \
-                /dev/null 2>/dev/null || true
-
-              # Copy UC catalog JARs to system classpath (/opt/spark/jars/).
-              # These JARs form the catalog plugin class hierarchy and must be on
-              # the system classloader for Hadoop's FileSystem to find
-              # AwsVendedTokenProvider when UC vends storage credentials.
-              echo "Copying UC catalog JARs to system classpath..."
-              cp /opt/spark/custom-jars/spark-catalog-patch-1.0.jar /opt/spark/jars/
-              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-spark_*.jar /opt/spark/jars/
-              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-client-*.jar /opt/spark/jars/
-
               # Start Spark Connect server using properties file
               exec /opt/spark/sbin/start-connect-server.sh \
                 --master k8s://https://kubernetes.default.svc:443 \

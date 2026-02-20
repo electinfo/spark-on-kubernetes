@@ -23,6 +23,13 @@ ADD pom-catalog-patch.xml pom.xml
 ADD src src
 RUN mvn package -q
 
+# Stage 1c: Resolve operator deps (UC connector, Delta, Juneau) at build time.
+# SparkApplication cluster mode: spark-operator pod cannot resolve Ivy to S3 (no hadoop-aws).
+# These JARs are baked into the image and referenced via spark.jars with local:// URIs.
+WORKDIR /operator-deps
+ADD pom-operator-deps.xml pom.xml
+RUN mvn dependency:copy-dependencies -f pom.xml -DoutputDirectory=/operator-deps/jars -DincludeScope=runtime
+
 # Stage 2: Build final image
 FROM apache/spark:4.1.0-scala2.13-java21-python3-ubuntu
 
@@ -52,10 +59,22 @@ ENV HADOOP_CONF_DIR=/opt/spark/conf
 # Copy S3A dependencies from Maven stage
 COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 
-# Copy patched UC catalog JAR to separate dir (loaded via spark.jars, not system classpath)
-# Must be loaded by same classloader as UC connector (via spark.jars.packages) to avoid ClassCastException
+# Copy patched UC catalog JAR and operator deps to separate dir (loaded via spark.jars, not system classpath)
+# Must be loaded by same classloader as UC connector to avoid ClassCastException
 RUN mkdir -p /opt/spark/custom-jars
 COPY --from=deps /catalog-patch/target/spark-catalog-patch-1.0.jar /opt/spark/custom-jars/
+COPY --from=deps /operator-deps/jars/*.jar /opt/spark/custom-jars/
+
+# Extract AwsVendedTokenProvider shim into a SEPARATE JAR on the system classpath.
+# UC connector's loadTable() poisons Hadoop config with this class name, but Hadoop's
+# Configuration.getClassByName() uses the system classloader (not Spark's child classloader).
+# This shim extends SimpleAWSCredentialsProvider and uses MinIO static credentials.
+RUN cd /tmp && \
+    jar xf /opt/spark/custom-jars/spark-catalog-patch-1.0.jar \
+        io/unitycatalog/spark/auth/storage/AwsVendedTokenProvider.class && \
+    jar cf /opt/spark/jars/aws-vended-token-shim.jar \
+        io/unitycatalog/spark/auth/storage/AwsVendedTokenProvider.class && \
+    rm -rf /tmp/io
 
 # Copy Ivy settings for local maven repository
 COPY conf/ivysettings.xml /opt/spark/conf/ivysettings.xml
