@@ -1,0 +1,60 @@
+<!-- Dependencies resolved at image build time for SparkApplication cluster mode.
+     spark-submit in the spark-operator pod cannot resolve Ivy deps to S3 (no hadoop-aws).
+     These JARs are baked into the image at /opt/spark/custom-jars/ and referenced
+     via spark.driver/executor.extraClassPath. -->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>info.elect</groupId>
+  <artifactId>spark-operator-deps</artifactId>
+  <version>1.0</version>
+  <repositories>
+    <repository>
+      <id>nexus</id>
+      <url>https://repo.elect.info/repository/maven-public/</url>
+    </repository>
+  </repositories>
+  <dependencies>
+    <!-- Unity Catalog Spark connector (custom build for Spark 4.1) -->
+    <dependency>
+      <groupId>io.unitycatalog</groupId>
+      <artifactId>unitycatalog-spark_2.13</artifactId>
+      <version>0.4.0-spark410</version>
+      <exclusions>
+        <exclusion><groupId>org.slf4j</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.core</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.module</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.dataformat</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.antlr</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.xerial.snappy</groupId><artifactId>*</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Delta Lake (custom build for Spark 4.1) -->
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-spark_4.1_2.13</artifactId>
+      <version>4.1.0-spark410</version>
+      <exclusions>
+        <exclusion><groupId>org.slf4j</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.core</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>com.fasterxml.jackson.module</groupId><artifactId>*</artifactId></exclusion>
+        <exclusion><groupId>org.antlr</groupId><artifactId>*</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Apache Juneau (HTML5 DTO builders for static page generation) -->
+    <dependency>
+      <groupId>org.apache.juneau</groupId>
+      <artifactId>juneau-dto</artifactId>
+      <version>9.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.juneau</groupId>
+      <artifactId>juneau-marshall</artifactId>
+      <version>9.1.0</version>
+    </dependency>
+  </dependencies>
+</project>
