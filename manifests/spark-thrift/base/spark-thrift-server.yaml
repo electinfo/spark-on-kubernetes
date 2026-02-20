@@ -42,12 +42,16 @@ spec:
               # Create Ivy cache directory (spark user home is /nonexistent in /etc/passwd)
               mkdir -p /nonexistent/.ivy2.5.2/cache /nonexistent/.ivy2.5.2/jars
 
+              # Build driver classpath from pre-installed custom JARs
+              # (Spark doesn't expand wildcards in --driver-class-path)
+              CUSTOM_CP=$(echo /opt/spark/custom-jars/*.jar | tr ' ' ':')
+
               # Start Spark Thrift Server (HiveServer2 protocol on port 10000)
               exec /opt/spark/sbin/start-thriftserver.sh \
                 --master k8s://https://kubernetes.default.svc:443 \
                 --deploy-mode client \
                 --name spark-thrift-server \
-                --driver-class-path "/opt/spark/custom-jars/*" \
+                --driver-class-path "$CUSTOM_CP" \
                 --properties-file /opt/spark/conf/spark-defaults.conf \
                 --conf spark.driver.host=$POD_IP \
                 --conf spark.ui.port=4041 \
