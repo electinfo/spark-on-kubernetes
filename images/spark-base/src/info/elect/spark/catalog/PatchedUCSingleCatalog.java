@@ -172,7 +172,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         } catch (Exception e) {
             // fall through to default
         }
-        return "s3://hive-warehouse/" + schemaName;
+        return "s3://hive-warehouse/" + catalogName + "/" + schemaName;
     }
 
     /**
