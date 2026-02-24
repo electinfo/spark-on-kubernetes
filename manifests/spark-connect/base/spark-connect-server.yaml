@@ -132,6 +132,12 @@ data:
     spark.sql.catalog.electinfo.token
     spark.sql.catalog.electinfo.renewCredential.enabled  false
 
+    # Derrick Law Firm catalog
+    spark.sql.catalog.derricklawfirm                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.derricklawfirm.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.derricklawfirm.token
+    spark.sql.catalog.derricklawfirm.renewCredential.enabled  false
+
     # Kopser catalog
     spark.sql.catalog.kopser                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.kopser.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
