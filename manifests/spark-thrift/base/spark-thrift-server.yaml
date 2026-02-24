@@ -156,6 +156,12 @@ data:
     spark.sql.catalog.electinfo.token
     spark.sql.catalog.electinfo.renewCredential.enabled  false
 
+    # Kopser catalog
+    spark.sql.catalog.kopser                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.kopser.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.kopser.token
+    spark.sql.catalog.kopser.renewCredential.enabled     false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
