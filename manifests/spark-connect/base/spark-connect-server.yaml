@@ -156,19 +156,20 @@ data:
 
     # Executor settings
     spark.executor.instances                             5
-    spark.executor.cores                                 8
-    spark.executor.memory                                48g
+    spark.executor.cores                                 4
+    spark.executor.memory                                24g
     spark.driver.memory                                  8g
     # Include distributed JARs (from spark.jars.packages) on executor system classpath.
     # Without this, /opt/spark/work-dir is on the classpath as a directory (no wildcard),
     # so Hadoop's classloader can't find classes in JARs there (e.g., AwsVendedTokenProvider).
     spark.executor.extraClassPath                        /opt/spark/work-dir/*
 
-    # Dynamic allocation (disabled for stable executor count)
-    spark.dynamicAllocation.enabled                      false
-    spark.dynamicAllocation.minExecutors                 1
-    spark.dynamicAllocation.maxExecutors                 1
+    # Dynamic allocation
+    spark.dynamicAllocation.enabled                      true
+    spark.dynamicAllocation.minExecutors                 0
+    spark.dynamicAllocation.maxExecutors                 5
     spark.dynamicAllocation.executorIdleTimeout          120s
+    spark.dynamicAllocation.shuffleTracking.enabled      true
 
     # Event logging
     spark.eventLog.enabled                               true
@@ -201,6 +202,7 @@ data:
     apiVersion: v1
     kind: Pod
     spec:
+      priorityClassName: data-processing
       terminationGracePeriodSeconds: 30
       containers:
         - name: spark-kubernetes-executor
