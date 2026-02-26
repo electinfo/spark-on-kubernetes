@@ -45,6 +45,8 @@ public class V1CatalogSync {
                 );
                 v1Catalog.createDatabase(db, true);
                 System.out.println("V1CatalogSync: Created V1 schema '" + schemaName + "'");
+            } else {
+                System.out.println("V1CatalogSync: V1 schema '" + schemaName + "' already exists");
             }
         } catch (Exception e) {
             System.err.println("WARN: V1CatalogSync.ensureSchemaExists('" +
@@ -83,6 +85,8 @@ public class V1CatalogSync {
                 v1Catalog.createDatabase(db, true);
                 System.out.println("V1CatalogSync: Created V1 schema '" + schemaName +
                     "' at " + dbPath);
+            } else {
+                System.out.println("V1CatalogSync: V1 schema '" + schemaName + "' already exists");
             }
         } catch (Exception e) {
             System.err.println("WARN: V1CatalogSync.ensureSchemaExists('" +
