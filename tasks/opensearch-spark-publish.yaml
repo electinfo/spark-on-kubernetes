@@ -1,0 +1,109 @@
+---
+# Build opensearch-hadoop spark-40 module from source and publish to Nexus.
+# Required because the opensearch-spark-40_2.13 artifact has never been published
+# to Maven Central. The module exists in the opensearch-hadoop source tree and
+# builds against Spark 4.1.x on the main branch.
+#
+# Usage:
+#   kubectl apply -f tasks/opensearch-spark-publish.yaml
+#   kubectl create -f tasks/opensearch-spark-taskrun.yaml
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: opensearch-spark-publish
+  namespace: tekton-pipelines
+spec:
+  description: Build opensearch-hadoop spark-40 from source and publish to Nexus
+  params:
+    - name: branch
+      type: string
+      default: "main"
+      description: opensearch-hadoop git branch to build
+    - name: publish-version
+      type: string
+      default: "1.3.0-spark411"
+      description: Version string for published artifact
+  results:
+    - name: spark-artifact
+      description: Published opensearch-spark artifact coordinates
+  steps:
+    - name: build-and-publish
+      image: eclipse-temurin:17-jdk
+      env:
+        - name: JAVA_OPTS
+          value: "-Xmx4g -Xms1g"
+        - name: NEXUS_USER
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: username
+        - name: NEXUS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexus-credentials
+              key: password
+      computeResources:
+        requests:
+          memory: "4Gi"
+          cpu: "2"
+        limits:
+          memory: "6Gi"
+          cpu: "4"
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "=== Installing git ==="
+        apt-get update -qq && apt-get install -y -qq git curl > /dev/null 2>&1
+
+        echo "=== Cloning opensearch-hadoop $(params.branch) ==="
+        git clone --depth 1 --branch $(params.branch) \
+          https://github.com/opensearch-project/opensearch-hadoop.git /tmp/opensearch-hadoop
+        cd /tmp/opensearch-hadoop
+
+        echo "=== Spark version in gradle.properties ==="
+        grep spark40Version gradle.properties
+
+        echo "=== Building opensearch-spark-40 JAR (tests skipped) ==="
+        ./gradlew :opensearch-spark-40:jar -x test -x javadoc -x scaladoc --no-daemon
+
+        echo "=== Locating built JAR ==="
+        JAR=$(find spark/sql-40/build/libs -name "opensearch-spark-40_2.13-*.jar" | head -1)
+        echo "Built: $JAR"
+        ls -lh "$JAR"
+
+        echo "=== Publishing to Nexus ==="
+        NEXUS_URL="https://repo.elect.info/repository/maven-releases"
+        GROUP_PATH="org/opensearch/client"
+        ARTIFACT="opensearch-spark-40_2.13"
+        VERSION="$(params.publish-version)"
+
+        # Upload JAR
+        curl --fail --http1.1 \
+          -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+          --upload-file "$JAR" \
+          "${NEXUS_URL}/${GROUP_PATH}/${ARTIFACT}/${VERSION}/${ARTIFACT}-${VERSION}.jar"
+        echo "Uploaded JAR"
+
+        # Upload POM
+        cat > /tmp/pom.xml << PEOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <project xmlns="http://maven.apache.org/POM/4.0.0">
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>org.opensearch.client</groupId>
+          <artifactId>${ARTIFACT}</artifactId>
+          <version>${VERSION}</version>
+          <name>OpenSearch Spark 4.0 (Scala 2.13)</name>
+          <description>opensearch-hadoop spark-40 built from $(params.branch) branch</description>
+        </project>
+        PEOF
+        curl --fail --http1.1 \
+          -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+          --upload-file /tmp/pom.xml \
+          "${NEXUS_URL}/${GROUP_PATH}/${ARTIFACT}/${VERSION}/${ARTIFACT}-${VERSION}.pom"
+        echo "Uploaded POM"
+
+        echo "=== Publish complete ==="
+        COORDS="org.opensearch.client:${ARTIFACT}:${VERSION}"
+        echo "Published: $COORDS"
+        echo -n "$COORDS" > $(results.spark-artifact.path)

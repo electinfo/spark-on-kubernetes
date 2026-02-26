@@ -47,7 +47,7 @@ spec:
               # The Thrift Server's HiveServer2 worker threads use the system
               # classloader (not Spark's child MutableURLClassLoader), so catalog
               # plugin classes must be on the JVM -cp to be found.
-              PACKAGES="org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410"
+              PACKAGES="org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410,org.opensearch.client:opensearch-spark-40_2.13:1.3.0-spark411"
               REPOS="https://repo.elect.info/repository/maven-public/"
 
               echo "Pre-resolving Maven packages..."
@@ -141,7 +141,7 @@ data:
     spark.metrics.conf                                   /opt/spark/conf/metrics.properties
 
     # Maven packages
-    spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410
+    spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410,org.opensearch.client:opensearch-spark-40_2.13:1.3.0-spark411
     spark.jars.repositories                               https://repo.elect.info/repository/maven-public/
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
@@ -205,6 +205,12 @@ data:
     spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.change.detection.mode            none
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
+
+    # OpenSearch connection settings
+    spark.opensearch.nodes                               opensearch-cluster-aegis.opensearch.svc.cluster.local
+    spark.opensearch.port                                9200
+    spark.opensearch.nodes.wan.only                      true
+    spark.opensearch.net.ssl                              false
 
   metrics.properties: |
     # Enable Prometheus metrics export
