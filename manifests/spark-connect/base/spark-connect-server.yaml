@@ -81,9 +81,11 @@ spec:
             requests:
               memory: "8Gi"
               cpu: "4"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "16Gi"
               cpu: "8"
+              ephemeral-storage: "2Gi"
           volumeMounts:
             - name: spark-conf
               mountPath: /opt/spark/conf
@@ -96,9 +98,13 @@ spec:
           configMap:
             name: spark-connect-config
         - name: ivy-cache
-          emptyDir: {}
+          hostPath:
+            path: /mnt/md/nvme/spark-connect/ivy-cache
+            type: DirectoryOrCreate
         - name: spark-local
-          emptyDir: {}
+          hostPath:
+            path: /mnt/md/nvme/spark-connect/spark-local
+            type: DirectoryOrCreate
 
 ---
 apiVersion: v1
