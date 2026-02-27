@@ -122,6 +122,11 @@ data:
     # Patched UC catalog JAR (loaded alongside spark.jars.packages for same classloader)
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
 
+    # Spark Connect session management
+    # Prevent session reaping during long-running writes (e.g. 196M voter nodes to Neo4j)
+    spark.connect.session.inactive.timeout               24h
+    spark.connect.session.closed.timeout                 1h
+
     # Disable Hive metastore (UC is the sole catalog)
     spark.sql.catalogImplementation                      in-memory
 
