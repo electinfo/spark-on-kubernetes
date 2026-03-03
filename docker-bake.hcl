@@ -11,7 +11,7 @@ variable "TAG" {
   default = "latest"
 }
 
-// Default builds everything
+// Default builds everything (excluding fec-runner which has separate deps)
 group "default" {
   targets = ["spark-base", "spark-images", "zeppelin-images"]
 }
@@ -19,6 +19,11 @@ group "default" {
 // Just Spark images (executor, driver, connect server, runner)
 group "spark-images" {
   targets = ["spark-executor", "spark-driver", "spark-connect-server", "spark-runner"]
+}
+
+// Enterprise images (fec-runner extends spark-runner)
+group "enterprise-images" {
+  targets = ["fec-runner"]
 }
 
 // Just Zeppelin images
@@ -127,5 +132,24 @@ target "zeppelin-interpreter" {
   }
   contexts = {
     "${REGISTRY}/electinfo/spark-base:latest" = "target:spark-base"
+  }
+}
+
+// FEC Runner - extends spark-runner with pure-translation CLI dependencies
+// Build separately: docker buildx bake fec-runner
+target "fec-runner" {
+  context = "images/fec-runner"
+  dockerfile = "Dockerfile"
+  tags = [
+    "${REGISTRY}/electinfo/fec-cli:${TAG}",
+    "localhost:32000/electinfo/fec-cli:${TAG}",
+  ]
+  platforms = ["linux/amd64"]
+  no-cache = true
+  args = {
+    REGISTRY = "${REGISTRY}"
+  }
+  contexts = {
+    "${REGISTRY}/electinfo/spark-runner:latest" = "target:spark-runner"
   }
 }
