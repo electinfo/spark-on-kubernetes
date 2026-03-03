@@ -16,6 +16,7 @@ USER root
 
 # Install pure-translation CLI dependencies not already in spark-runner
 # (pyspark, pyarrow, pandas, boto3, grpcio, PyYAML, requests already in base)
+# (geopandas, shapely, pyproj, fiona, gdal-bin, libgdal-dev already in spark-runner)
 RUN pip install --no-cache-dir \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
@@ -23,7 +24,13 @@ RUN pip install --no-cache-dir \
     "omegaconf>=2.3.0" \
     "siege-utilities>=3.4.0" \
     "rapidfuzz>=3.0.0" \
-    "rich>=13.0.0"
+    "rich>=13.0.0" \
+    "Django>=5.0" \
+    "djangorestframework>=3.15.0" \
+    "djangorestframework-gis>=1.0" \
+    "django-grappelli>=4.0" \
+    "django-cors-headers>=4.0" \
+    "django-extensions>=3.0"
 
 # Create directory for enterprise code mount
 RUN mkdir -p /opt/enterprise && chown spark:spark /opt/enterprise
