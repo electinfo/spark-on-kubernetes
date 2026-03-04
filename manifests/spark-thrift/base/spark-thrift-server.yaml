@@ -162,6 +162,18 @@ data:
     spark.sql.catalog.kopser.token
     spark.sql.catalog.kopser.renewCredential.enabled     false
 
+    # Census catalog
+    spark.sql.catalog.census                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.census.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.census.token
+    spark.sql.catalog.census.renewCredential.enabled     false
+
+    # TEC catalog
+    spark.sql.catalog.tec                                info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.tec.uri                            http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.tec.token
+    spark.sql.catalog.tec.renewCredential.enabled        false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
