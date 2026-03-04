@@ -155,6 +155,12 @@ data:
     spark.sql.catalog.kopser.token
     spark.sql.catalog.kopser.renewCredential.enabled     false
 
+    # FEC Bulk catalog
+    spark.sql.catalog.fec_bulk                           info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.fec_bulk.uri                       http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.fec_bulk.token
+    spark.sql.catalog.fec_bulk.renewCredential.enabled   false
+
     # Census catalog
     spark.sql.catalog.census                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.census.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
