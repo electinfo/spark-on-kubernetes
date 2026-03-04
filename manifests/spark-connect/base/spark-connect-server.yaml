@@ -179,6 +179,18 @@ data:
     spark.sql.catalog.tec.token
     spark.sql.catalog.tec.renewCredential.enabled        false
 
+    # Redistricting Data Hub catalog
+    spark.sql.catalog.rdh                                info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.rdh.uri                            http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.rdh.token
+    spark.sql.catalog.rdh.renewCredential.enabled        false
+
+    # Civitech catalog
+    spark.sql.catalog.civitech                           info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.civitech.uri                       http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.civitech.token
+    spark.sql.catalog.civitech.renewCredential.enabled   false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
