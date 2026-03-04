@@ -635,6 +635,12 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             // FileSystem (from ensureCleanS3ACache) which has the correct settings.
             if (table instanceof V1Table) {
                 V1Table cleaned = stripUCStorageCredentials((V1Table) table);
+                // Sync table metadata to V1 SessionCatalog so the V1 write path
+                // (triggered by saveAsTable's V1Table fallback) can resolve the
+                // table with the correct S3 LOCATION. Without this, tables from
+                // non-session catalogs (census, tec) are not found when the V1
+                // fallback strips the catalog and resolves against spark_catalog.
+                org.apache.spark.sql.V1CatalogSync.syncTable(cleaned.v1Table());
                 return new TruncatableV1Table(cleaned, ident);
             }
             if (table instanceof TruncatableTable) {

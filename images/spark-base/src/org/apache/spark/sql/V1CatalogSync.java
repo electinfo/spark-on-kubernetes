@@ -44,9 +44,9 @@ public class V1CatalogSync {
                     scala.collection.immutable.Map$.MODULE$.<String, String>empty()
                 );
                 v1Catalog.createDatabase(db, true);
-                System.out.println("V1CatalogSync: Created V1 schema '" + schemaName + "'");
+                System.out.println("V1CatalogSync: Registered schema '" + schemaName + "' in V1 SessionCatalog");
             } else {
-                System.out.println("V1CatalogSync: V1 schema '" + schemaName + "' already exists");
+                System.out.println("V1CatalogSync: Schema '" + schemaName + "' already registered");
             }
         } catch (Exception e) {
             System.err.println("WARN: V1CatalogSync.ensureSchemaExists('" +
@@ -83,14 +83,46 @@ public class V1CatalogSync {
                     scala.collection.immutable.Map$.MODULE$.<String, String>empty()
                 );
                 v1Catalog.createDatabase(db, true);
-                System.out.println("V1CatalogSync: Created V1 schema '" + schemaName +
-                    "' at " + dbPath);
+                System.out.println("V1CatalogSync: Registered schema '" + schemaName +
+                    "' in V1 SessionCatalog at " + dbPath);
             } else {
-                System.out.println("V1CatalogSync: V1 schema '" + schemaName + "' already exists");
+                System.out.println("V1CatalogSync: Schema '" + schemaName + "' already registered");
             }
         } catch (Exception e) {
             System.err.println("WARN: V1CatalogSync.ensureSchemaExists('" +
                 schemaName + "', '" + storageRoot + "'): " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sync a table's metadata to the V1 SessionCatalog (InMemoryCatalog).
+     *
+     * When a V2 catalog's loadTable() returns a V1Table, Spark's
+     * DataFrameWriter.saveAsTable() falls back to the V1 write path, which strips
+     * the catalog prefix and resolves the table against the session catalog
+     * (spark_catalog). For non-session catalogs (e.g., census, tec), the table
+     * doesn't exist in the session catalog's V2 plugin (electinfo), but Spark's
+     * ResolveRelations rule falls back to checking V1 SessionCatalog. By syncing
+     * the table here, InsertIntoStatement resolves the table with the correct
+     * S3 LOCATION and writes data to the right place.
+     *
+     * @param table the CatalogTable metadata (from V1Table.v1Table())
+     */
+    public static void syncTable(
+            org.apache.spark.sql.catalyst.catalog.CatalogTable table) {
+        try {
+            SparkSession spark = SparkSession.active();
+            SessionCatalog v1Catalog = spark.sessionState().catalog();
+            org.apache.spark.sql.catalyst.TableIdentifier ident = table.identifier();
+            if (!v1Catalog.tableExists(ident)) {
+                v1Catalog.createTable(table, true, false);
+                System.out.println("V1CatalogSync: Synced table '" + ident +
+                    "' to V1 SessionCatalog (location: " +
+                    table.storage().locationUri() + ")");
+            }
+        } catch (Exception e) {
+            System.err.println("WARN: V1CatalogSync.syncTable('" +
+                table.identifier() + "'): " + e.getMessage());
         }
     }
 }
