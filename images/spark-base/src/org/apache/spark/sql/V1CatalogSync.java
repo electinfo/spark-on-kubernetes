@@ -114,7 +114,26 @@ public class V1CatalogSync {
             SparkSession spark = SparkSession.active();
             SessionCatalog v1Catalog = spark.sessionState().catalog();
             org.apache.spark.sql.catalyst.TableIdentifier ident = table.identifier();
-            if (!v1Catalog.tableExists(ident)) {
+            if (v1Catalog.tableExists(ident)) {
+                // Table already exists in V1 — check if it's from a different catalog.
+                // V1 has no catalog namespace, so tables from different catalogs
+                // (e.g. electinfo.quicksilver.committee_entities vs
+                // tec.quicksilver.committee_entities) collide on the same V1 name.
+                // Replace the V1 entry when the storage location differs, so the
+                // current catalog's schema and location are used for V1 fallback.
+                org.apache.spark.sql.catalyst.catalog.CatalogTable existing =
+                    v1Catalog.getTableMetadata(ident);
+                boolean locationChanged = !existing.storage().locationUri()
+                    .equals(table.storage().locationUri());
+                if (locationChanged) {
+                    v1Catalog.dropTable(ident, true, true);
+                    v1Catalog.createTable(table, true, false);
+                    System.out.println("V1CatalogSync: Replaced table '" + ident +
+                        "' in V1 SessionCatalog (location: " +
+                        existing.storage().locationUri() + " -> " +
+                        table.storage().locationUri() + ")");
+                }
+            } else {
                 v1Catalog.createTable(table, true, false);
                 System.out.println("V1CatalogSync: Synced table '" + ident +
                     "' to V1 SessionCatalog (location: " +
