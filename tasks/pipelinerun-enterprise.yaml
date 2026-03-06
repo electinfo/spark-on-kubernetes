@@ -1,0 +1,29 @@
+---
+# Build enterprise images (enterprise-runner, fec-runner)
+# kubectl create -f tasks/pipelinerun-enterprise.yaml
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: enterprise-images-build-
+  namespace: tekton-pipelines
+spec:
+  pipelineRef:
+    name: spark-images-build
+  params:
+    - name: git-revision
+      value: main
+    - name: registry
+      value: registry.container-registry.svc.cluster.local:5000
+    - name: tag
+      value: latest
+    - name: targets
+      value: enterprise-images
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
