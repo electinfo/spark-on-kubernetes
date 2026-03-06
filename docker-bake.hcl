@@ -21,9 +21,9 @@ group "spark-images" {
   targets = ["spark-executor", "spark-driver", "spark-connect-server", "spark-runner"]
 }
 
-// Enterprise images (fec-runner extends spark-runner)
+// Enterprise images (fec-runner and enterprise-runner extend spark-runner)
 group "enterprise-images" {
-  targets = ["fec-runner"]
+  targets = ["fec-runner", "enterprise-runner"]
 }
 
 // Just Zeppelin images
@@ -132,6 +132,25 @@ target "zeppelin-interpreter" {
   }
   contexts = {
     "${REGISTRY}/electinfo/spark-base:latest" = "target:spark-base"
+  }
+}
+
+// Enterprise Runner - parallel pod for our Rundeck jobs (same deps as fec-runner)
+// Build separately: docker buildx bake enterprise-runner
+target "enterprise-runner" {
+  context = "images/enterprise-runner"
+  dockerfile = "Dockerfile"
+  tags = [
+    "${REGISTRY}/electinfo/enterprise-runner:${TAG}",
+    "localhost:32000/electinfo/enterprise-runner:${TAG}",
+  ]
+  platforms = ["linux/amd64"]
+  no-cache = true
+  args = {
+    REGISTRY = "${REGISTRY}"
+  }
+  contexts = {
+    "${REGISTRY}/electinfo/spark-runner:latest" = "target:spark-runner"
   }
 }
 
