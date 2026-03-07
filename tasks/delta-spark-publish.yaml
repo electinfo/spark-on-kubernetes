@@ -89,7 +89,8 @@ spec:
         echo "=== Overriding publishTo for all modules ==="
         # Delta's releaseSettings set publishTo to Maven Central at project level.
         # Override globally by creating a root-level .sbt that overrides publishTo.
-        NEXUS_RELEASES="https://repo.elect.info/repository/maven-releases/"
+        # Use internal cluster URL to bypass Traefik/TLS.
+        NEXUS_RELEASES="http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-releases/"
         cat > publish-override.sbt << SEOF
         ThisBuild / publishTo := Some("Nexus" at "$NEXUS_RELEASES")
         ThisBuild / publishMavenStyle := true
@@ -110,7 +111,7 @@ spec:
         cat > ~/.sbt/1.0/credentials.sbt << EOF
         credentials += Credentials(
           "Sonatype Nexus Repository Manager",
-          "repo.elect.info",
+          "nexus-nexus-repository-manager.nexus.svc.cluster.local",
           "$NEXUS_USER",
           "$NEXUS_PASSWORD"
         )

@@ -88,7 +88,7 @@ spec:
                         repositories {
                             maven {
                                 name = 'nexus'
-                                url = 'https://repo.elect.info/repository/maven-releases/'
+                                url = 'http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-releases/'
                                 credentials {
                                     username = System.getenv('NEXUS_USER')
                                     password = System.getenv('NEXUS_PASSWORD')

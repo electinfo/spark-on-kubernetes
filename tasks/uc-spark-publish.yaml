@@ -76,7 +76,8 @@ spec:
         echo "=== Overriding publish target per-project ==="
         # UC release settings set publishTo at project level (Maven Central).
         # Override with per-project .sbt files that SBT loads after build.sbt.
-        NEXUS_RELEASES="https://repo.elect.info/repository/maven-releases/"
+        # Use internal cluster URL to bypass Traefik/TLS.
+        NEXUS_RELEASES="http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-releases/"
         for dir in clients/java connectors/spark; do
           cat > "$dir/publish-override.sbt" << SEOF
         publishTo := Some("Nexus" at "$NEXUS_RELEASES")
@@ -89,7 +90,7 @@ spec:
         cat > ~/.sbt/1.0/credentials.sbt << EOF
         credentials += Credentials(
           "Sonatype Nexus Repository Manager",
-          "repo.elect.info",
+          "nexus-nexus-repository-manager.nexus.svc.cluster.local",
           "$NEXUS_USER",
           "$NEXUS_PASSWORD"
         )
