@@ -191,6 +191,12 @@ data:
     spark.sql.catalog.civitech.token
     spark.sql.catalog.civitech.renewCredential.enabled   false
 
+    # Congress.gov catalog
+    spark.sql.catalog.congress_gov                       info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.congress_gov.uri                   http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.congress_gov.token
+    spark.sql.catalog.congress_gov.renewCredential.enabled false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
