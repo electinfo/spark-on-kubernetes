@@ -55,6 +55,10 @@ data:
     spark.sql.catalog.congress_gov.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.congress_gov.token=
     spark.sql.catalog.congress_gov.renewCredential.enabled=false
+    spark.sql.catalog.fec_filings=info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.fec_filings.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.fec_filings.token=
+    spark.sql.catalog.fec_filings.renewCredential.enabled=false
 
     # S3A Configuration (s3proxy on asustor)
     spark.hadoop.fs.defaultFS=s3a://static-pages
