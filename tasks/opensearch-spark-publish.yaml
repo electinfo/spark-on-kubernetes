@@ -54,7 +54,7 @@ spec:
         set -e
 
         echo "=== Installing git ==="
-        apt-get update -qq && apt-get install -y -qq git curl > /dev/null 2>&1
+        apt-get update -qq && apt-get install -y -qq git > /dev/null 2>&1
 
         echo "=== Cloning opensearch-hadoop $(params.branch) ==="
         git clone --depth 1 --branch $(params.branch) \
@@ -64,46 +64,50 @@ spec:
         echo "=== Spark version in gradle.properties ==="
         grep spark40Version gradle.properties
 
-        echo "=== Building opensearch-spark-40 JAR (tests skipped) ==="
-        ./gradlew :opensearch-spark-40:jar -x test -x javadoc -x scaladoc --no-daemon
+        echo "=== Creating Gradle init script for Nexus publish ==="
+        PUBLISH_VERSION="$(params.publish-version)"
+        cat > /tmp/init-publish.gradle << 'INITEOF'
+        // Gradle init script: configure maven-publish for opensearch-spark-40
+        allprojects {
+            plugins.withId('java') {
+                if (project.name == 'opensearch-spark-40') {
+                    apply plugin: 'maven-publish'
+                    publishing {
+                        publications {
+                            maven(MavenPublication) {
+                                groupId = 'org.opensearch.client'
+                                artifactId = 'opensearch-spark-40_2.13'
+                                version = System.getenv('PUBLISH_VERSION')
+                                from components.java
+                                pom {
+                                    name = 'OpenSearch Spark 4.0 (Scala 2.13)'
+                                    description = 'opensearch-hadoop spark-40 connector'
+                                }
+                            }
+                        }
+                        repositories {
+                            maven {
+                                name = 'nexus'
+                                url = 'https://repo.elect.info/repository/maven-releases/'
+                                credentials {
+                                    username = System.getenv('NEXUS_USER')
+                                    password = System.getenv('NEXUS_PASSWORD')
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        INITEOF
 
-        echo "=== Locating built JAR ==="
-        JAR=$(find spark/sql-40/build/libs -name "opensearch-spark-40_2.13-*.jar" | head -1)
-        echo "Built: $JAR"
-        ls -lh "$JAR"
-
-        echo "=== Publishing to Nexus ==="
-        NEXUS_URL="https://repo.elect.info/repository/maven-releases"
-        GROUP_PATH="org/opensearch/client"
-        ARTIFACT="opensearch-spark-40_2.13"
-        VERSION="$(params.publish-version)"
-
-        # Upload JAR
-        curl --fail --http1.1 \
-          -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
-          --upload-file "$JAR" \
-          "${NEXUS_URL}/${GROUP_PATH}/${ARTIFACT}/${VERSION}/${ARTIFACT}-${VERSION}.jar"
-        echo "Uploaded JAR"
-
-        # Upload POM
-        cat > /tmp/pom.xml << PEOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <project xmlns="http://maven.apache.org/POM/4.0.0">
-          <modelVersion>4.0.0</modelVersion>
-          <groupId>org.opensearch.client</groupId>
-          <artifactId>${ARTIFACT}</artifactId>
-          <version>${VERSION}</version>
-          <name>OpenSearch Spark 4.0 (Scala 2.13)</name>
-          <description>opensearch-hadoop spark-40 built from $(params.branch) branch</description>
-        </project>
-        PEOF
-        curl --fail --http1.1 \
-          -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
-          --upload-file /tmp/pom.xml \
-          "${NEXUS_URL}/${GROUP_PATH}/${ARTIFACT}/${VERSION}/${ARTIFACT}-${VERSION}.pom"
-        echo "Uploaded POM"
+        echo "=== Building and publishing opensearch-spark-40 ==="
+        export PUBLISH_VERSION="$PUBLISH_VERSION"
+        ./gradlew :opensearch-spark-40:publish \
+          --init-script /tmp/init-publish.gradle \
+          -x test -x javadoc -x scaladoc --no-daemon
 
         echo "=== Publish complete ==="
-        COORDS="org.opensearch.client:${ARTIFACT}:${VERSION}"
+        COORDS="org.opensearch.client:opensearch-spark-40_2.13:${PUBLISH_VERSION}"
         echo "Published: $COORDS"
         echo -n "$COORDS" > $(results.spark-artifact.path)
