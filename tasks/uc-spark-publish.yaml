@@ -80,7 +80,7 @@ spec:
         NEXUS_RELEASES="http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-releases/"
         for dir in clients/java connectors/spark; do
           cat > "$dir/publish-override.sbt" << SEOF
-        publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        publishTo := Some(("Nexus" at "$NEXUS_RELEASES").withAllowInsecureProtocol(true))
         publishMavenStyle := true
         SEOF
         done

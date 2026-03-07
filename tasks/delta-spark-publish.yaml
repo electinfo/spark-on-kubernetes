@@ -92,7 +92,7 @@ spec:
         # Use internal cluster URL to bypass Traefik/TLS.
         NEXUS_RELEASES="http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/maven-releases/"
         cat > publish-override.sbt << SEOF
-        ThisBuild / publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        ThisBuild / publishTo := Some(("Nexus" at "$NEXUS_RELEASES").withAllowInsecureProtocol(true))
         ThisBuild / publishMavenStyle := true
         SEOF
 
@@ -100,7 +100,7 @@ spec:
         for dir in storage spark-unified; do
           if [ -d "$dir" ]; then
             cat > "$dir/publish-override.sbt" << PEOF
-        publishTo := Some("Nexus" at "$NEXUS_RELEASES")
+        publishTo := Some(("Nexus" at "$NEXUS_RELEASES").withAllowInsecureProtocol(true))
         publishMavenStyle := true
         PEOF
           fi
