@@ -325,6 +325,7 @@ spec:
   sidecars:
     - name: docker
       image: $(params.dind-image)
+      computeResources: {}
       args:
         - "--tls=false"
         - "--insecure-registry=registry.container-registry.svc.cluster.local:5000"
@@ -332,7 +333,6 @@ spec:
         privileged: true
       env:
         - name: DOCKER_TLS_CERTDIR
-          value: ""
       volumeMounts:
         - name: docker-socket
           mountPath: /var/run
@@ -345,6 +345,7 @@ spec:
   steps:
     - name: bake
       image: docker:27-cli
+      computeResources: {}
       workingDir: $(workspaces.source.path)
       env:
         - name: DOCKER_HOST
@@ -398,6 +399,7 @@ spec:
           mountPath: /var/run
     - name: check-changes
       image: gcr.io/go-containerregistry/crane:debug
+      computeResources: {}
       script: |
         #!/busybox/sh
         set -e
