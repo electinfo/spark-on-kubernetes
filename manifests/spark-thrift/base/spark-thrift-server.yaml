@@ -216,6 +216,24 @@ data:
     spark.sql.catalog.fec_filings.token
     spark.sql.catalog.fec_filings.renewCredential.enabled false
 
+    # Arizona Secretary of State catalog
+    spark.sql.catalog.az_sos                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.az_sos.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.az_sos.token
+    spark.sql.catalog.az_sos.renewCredential.enabled    false
+
+    # Pennsylvania Department of State catalog
+    spark.sql.catalog.pa_dos                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.pa_dos.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.pa_dos.token
+    spark.sql.catalog.pa_dos.renewCredential.enabled    false
+
+    # Washington Public Disclosure Commission catalog
+    spark.sql.catalog.wa_pdc                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.wa_pdc.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.wa_pdc.token
+    spark.sql.catalog.wa_pdc.renewCredential.enabled    false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
