@@ -221,6 +221,24 @@ data:
     spark.sql.catalog.wa_pdc.token
     spark.sql.catalog.wa_pdc.renewCredential.enabled    false
 
+    # Maine Commission on Ethics & Election Practices catalog
+    spark.sql.catalog.me_ethics                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.me_ethics.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.me_ethics.token
+    spark.sql.catalog.me_ethics.renewCredential.enabled  false
+
+    # Georgia Transparency & Campaign Finance Commission catalog
+    spark.sql.catalog.ga_tcfc                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ga_tcfc.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ga_tcfc.token
+    spark.sql.catalog.ga_tcfc.renewCredential.enabled    false
+
+    # Minnesota Campaign Finance Board catalog
+    spark.sql.catalog.mn_cfb                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.mn_cfb.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.mn_cfb.token
+    spark.sql.catalog.mn_cfb.renewCredential.enabled     false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
