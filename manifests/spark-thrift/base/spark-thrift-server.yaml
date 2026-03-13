@@ -234,6 +234,12 @@ data:
     spark.sql.catalog.wa_pdc.token
     spark.sql.catalog.wa_pdc.renewCredential.enabled    false
 
+    # North Carolina State Board of Elections catalog
+    spark.sql.catalog.nc_sbe                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.nc_sbe.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.nc_sbe.token
+    spark.sql.catalog.nc_sbe.renewCredential.enabled    false
+
     # Maine Commission on Ethics & Election Practices catalog
     spark.sql.catalog.me_ethics                          info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.me_ethics.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
