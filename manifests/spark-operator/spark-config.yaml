@@ -91,6 +91,10 @@ data:
     spark.sql.catalog.wi_cfis.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.wi_cfis.token=
     spark.sql.catalog.wi_cfis.renewCredential.enabled=false
+    spark.sql.catalog.openelections=info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.openelections.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.openelections.token=
+    spark.sql.catalog.openelections.renewCredential.enabled=false
 
     # S3A Configuration (s3proxy on asustor)
     spark.hadoop.fs.defaultFS=s3a://static-pages
