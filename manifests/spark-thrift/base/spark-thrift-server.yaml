@@ -294,6 +294,12 @@ data:
     spark.sql.catalog.il_sbe.token
     spark.sql.catalog.il_sbe.renewCredential.enabled     false
 
+    # Indiana Secretary of State Campaign Finance catalog
+    spark.sql.catalog.in_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.in_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.in_sos.token
+    spark.sql.catalog.in_sos.renewCredential.enabled     false
+
     # Minnesota Campaign Finance Board catalog
     spark.sql.catalog.mn_cfb                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.mn_cfb.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
