@@ -276,6 +276,18 @@ data:
     spark.sql.catalog.wi_cfis.token
     spark.sql.catalog.wi_cfis.renewCredential.enabled    false
 
+    # Colorado TRACER catalog
+    spark.sql.catalog.co_tracer                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.co_tracer.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.co_tracer.token
+    spark.sql.catalog.co_tracer.renewCredential.enabled  false
+
+    # Alabama Secretary of State FCPA catalog
+    spark.sql.catalog.al_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.al_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.al_sos.token
+    spark.sql.catalog.al_sos.renewCredential.enabled     false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
