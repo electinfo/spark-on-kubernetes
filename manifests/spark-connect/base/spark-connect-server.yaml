@@ -239,6 +239,18 @@ data:
     spark.sql.catalog.ga_tcfc.token
     spark.sql.catalog.ga_tcfc.renewCredential.enabled    false
 
+    # New Hampshire Campaign Finance System catalog
+    spark.sql.catalog.nh_cfs                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.nh_cfs.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.nh_cfs.token
+    spark.sql.catalog.nh_cfs.renewCredential.enabled     false
+
+    # Iowa Ethics & Campaign Disclosure Board catalog
+    spark.sql.catalog.ia_ecdb                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ia_ecdb.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ia_ecdb.token
+    spark.sql.catalog.ia_ecdb.renewCredential.enabled    false
+
     # Minnesota Campaign Finance Board catalog
     spark.sql.catalog.mn_cfb                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.mn_cfb.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
@@ -256,6 +268,12 @@ data:
     spark.sql.catalog.openelections.uri                  http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.openelections.token
     spark.sql.catalog.openelections.renewCredential.enabled false
+
+    # Alaska Public Offices Commission catalog
+    spark.sql.catalog.ak_apoc                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ak_apoc.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ak_apoc.token
+    spark.sql.catalog.ak_apoc.renewCredential.enabled    false
 
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
