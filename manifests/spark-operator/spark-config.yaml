@@ -87,6 +87,10 @@ data:
     spark.sql.catalog.ga_tcfc.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.ga_tcfc.token=
     spark.sql.catalog.ga_tcfc.renewCredential.enabled=false
+    spark.sql.catalog.hi_csc=info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.hi_csc.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.hi_csc.token=
+    spark.sql.catalog.hi_csc.renewCredential.enabled=false
     spark.sql.catalog.mn_cfb=info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.mn_cfb.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.mn_cfb.token=
