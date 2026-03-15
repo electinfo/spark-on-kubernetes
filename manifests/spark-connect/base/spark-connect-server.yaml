@@ -209,6 +209,12 @@ data:
     spark.sql.catalog.az_sos.token
     spark.sql.catalog.az_sos.renewCredential.enabled    false
 
+    # California FPPC CAL-ACCESS catalog
+    spark.sql.catalog.ca_fppc                           info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ca_fppc.uri                       http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ca_fppc.token
+    spark.sql.catalog.ca_fppc.renewCredential.enabled   false
+
     # Pennsylvania Department of State catalog
     spark.sql.catalog.pa_dos                            info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.pa_dos.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
