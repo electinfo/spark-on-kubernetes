@@ -276,6 +276,12 @@ data:
     spark.sql.catalog.ia_ecdb.token
     spark.sql.catalog.ia_ecdb.renewCredential.enabled    false
 
+    # Idaho Secretary of State Sunshine catalog
+    spark.sql.catalog.id_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.id_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.id_sos.token
+    spark.sql.catalog.id_sos.renewCredential.enabled     false
+
     # Illinois State Board of Elections catalog
     spark.sql.catalog.il_sbe                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.il_sbe.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
@@ -311,6 +317,12 @@ data:
     spark.sql.catalog.ar_ethics.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.ar_ethics.token
     spark.sql.catalog.ar_ethics.renewCredential.enabled  false
+
+    # Delaware Department of Elections CFRS catalog
+    spark.sql.catalog.de_doe                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.de_doe.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.de_doe.token
+    spark.sql.catalog.de_doe.renewCredential.enabled     false
 
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
