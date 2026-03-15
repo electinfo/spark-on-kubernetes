@@ -11,6 +11,10 @@ variable "TAG" {
   default = "latest"
 }
 
+variable "PIP_CACHE_EPOCH" {
+  default = "0"
+}
+
 // Default builds everything (excluding fec-runner which has separate deps)
 group "default" {
   targets = ["spark-base", "spark-images", "zeppelin-images"]
@@ -98,6 +102,7 @@ target "spark-runner" {
   cache-to = ["type=registry,ref=${REGISTRY}/electinfo/spark-runner:cache,mode=max"]
   args = {
     REGISTRY = "${REGISTRY}"
+    PIP_CACHE_EPOCH = "${PIP_CACHE_EPOCH}"
   }
   contexts = {
     "${REGISTRY}/electinfo/spark-connect-server:latest" = "target:spark-connect-server"

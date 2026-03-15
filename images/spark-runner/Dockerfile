@@ -39,4 +39,14 @@ COPY --from=unitycatalog/unitycatalog:v0.4.0 /home/unitycatalog /home/unitycatal
 RUN chmod -R a+rX /home/unitycatalog
 ENV PATH="/home/unitycatalog/bin:${PATH}"
 
+# Stable pipeline Python dependencies (cached normally)
+RUN pip install --no-cache-dir pyyaml pandas zstandard
+
+# electinfo-common from Nexus PyPI (cache-busted on each triggered build)
+ARG PIP_CACHE_EPOCH=0
+RUN pip install --no-cache-dir \
+    --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
+    --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
+    electinfo-common
+
 USER spark

@@ -365,6 +365,7 @@ spec:
         # Export variables for docker-bake.hcl
         export REGISTRY="$(params.registry)"
         export TAG="$(params.tag)"
+        export PIP_CACHE_EPOCH="$(date +%s)"
 
         # Create buildkitd config for insecure registry
         mkdir -p /tmp/buildkit
