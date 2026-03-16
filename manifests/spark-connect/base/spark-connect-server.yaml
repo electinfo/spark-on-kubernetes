@@ -341,6 +341,12 @@ data:
     spark.sql.catalog.de_doe.token
     spark.sql.catalog.de_doe.renewCredential.enabled     false
 
+    # Ohio Secretary of State catalog
+    spark.sql.catalog.oh_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.oh_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.oh_sos.token
+    spark.sql.catalog.oh_sos.renewCredential.enabled     false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
