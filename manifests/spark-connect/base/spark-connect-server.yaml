@@ -311,6 +311,12 @@ data:
     spark.sql.catalog.mn_cfb.token
     spark.sql.catalog.mn_cfb.renewCredential.enabled     false
 
+    # Nebraska Accountability and Disclosure Commission catalog
+    spark.sql.catalog.ne_nadc                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ne_nadc.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ne_nadc.token
+    spark.sql.catalog.ne_nadc.renewCredential.enabled     false
+
     # Wisconsin Campaign Finance Information System catalog
     spark.sql.catalog.wi_cfis                            info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.wi_cfis.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
@@ -352,6 +358,12 @@ data:
     spark.sql.catalog.de_doe.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.de_doe.token
     spark.sql.catalog.de_doe.renewCredential.enabled     false
+
+    # Missouri Ethics Commission campaign finance catalog
+    spark.sql.catalog.mo_mec                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.mo_mec.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.mo_mec.token
+    spark.sql.catalog.mo_mec.renewCredential.enabled     false
 
     # Mississippi Secretary of State Campaign Finance catalog
     spark.sql.catalog.ms_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
