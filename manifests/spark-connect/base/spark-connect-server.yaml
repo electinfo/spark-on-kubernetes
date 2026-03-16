@@ -293,6 +293,18 @@ data:
     spark.sql.catalog.ky_kref.token
     spark.sql.catalog.ky_kref.renewCredential.enabled    false
 
+    # Louisiana Board of Ethics catalog
+    spark.sql.catalog.la_boe                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.la_boe.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.la_boe.token
+    spark.sql.catalog.la_boe.renewCredential.enabled     false
+
+    # Massachusetts Office of Campaign & Political Finance catalog
+    spark.sql.catalog.ma_ocpf                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ma_ocpf.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ma_ocpf.token
+    spark.sql.catalog.ma_ocpf.renewCredential.enabled    false
+
     # Minnesota Campaign Finance Board catalog
     spark.sql.catalog.mn_cfb                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.mn_cfb.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
@@ -341,11 +353,23 @@ data:
     spark.sql.catalog.de_doe.token
     spark.sql.catalog.de_doe.renewCredential.enabled     false
 
+    # Mississippi Secretary of State Campaign Finance catalog
+    spark.sql.catalog.ms_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ms_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ms_sos.token
+    spark.sql.catalog.ms_sos.renewCredential.enabled     false
+
     # Ohio Secretary of State catalog
     spark.sql.catalog.oh_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.oh_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.oh_sos.token
     spark.sql.catalog.oh_sos.renewCredential.enabled     false
+
+    # Maryland State Board of Elections CRIS catalog
+    spark.sql.catalog.md_sboe                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.md_sboe.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.md_sboe.token
+    spark.sql.catalog.md_sboe.renewCredential.enabled    false
 
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
