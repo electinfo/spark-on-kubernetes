@@ -39,6 +39,13 @@ COPY --from=unitycatalog/unitycatalog:v0.4.0 /home/unitycatalog /home/unitycatal
 RUN chmod -R a+rX /home/unitycatalog
 ENV PATH="/home/unitycatalog/bin:${PATH}"
 
+# Install Playwright + Chromium for ORESTAR browser automation (bypasses F5 bot protection)
+# Browsers installed to /opt/playwright so spark user can access them at runtime
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN pip install --no-cache-dir playwright xlrd \
+    && playwright install --with-deps chromium \
+    && chmod -R a+rX /opt/playwright
+
 # Stable pipeline Python dependencies (cached normally)
 RUN pip install --no-cache-dir pyyaml pandas zstandard
 
