@@ -426,11 +426,23 @@ data:
     spark.sql.catalog.ok_ethics.token
     spark.sql.catalog.ok_ethics.renewCredential.enabled  false
 
+    # Utah Lt. Governor's Office Information Disclosures catalog
+    spark.sql.catalog.ut_lgid                            info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.ut_lgid.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.ut_lgid.token
+    spark.sql.catalog.ut_lgid.renewCredential.enabled    false
+
     # Virginia Department of Elections catalog
     spark.sql.catalog.va_doe                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.va_doe.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
     spark.sql.catalog.va_doe.token
     spark.sql.catalog.va_doe.renewCredential.enabled     false
+
+    # Vermont Secretary of State Campaign Finance catalog
+    spark.sql.catalog.vt_sos                             info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.vt_sos.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.vt_sos.token
+    spark.sql.catalog.vt_sos.renewCredential.enabled     false
 
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
