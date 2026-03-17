@@ -425,6 +425,12 @@ data:
     spark.sql.catalog.ok_ethics.token
     spark.sql.catalog.ok_ethics.renewCredential.enabled  false
 
+    # South Carolina Ethics Commission catalog
+    spark.sql.catalog.sc_ethics                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.sc_ethics.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.sc_ethics.token
+    spark.sql.catalog.sc_ethics.renewCredential.enabled  false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
