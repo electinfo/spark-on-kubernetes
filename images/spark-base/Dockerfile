@@ -52,7 +52,8 @@ RUN pip install --no-cache-dir \
     graphframes \
     opensearch-py>=2.4.0 \
     neo4j>=5.0.0 \
-    psycopg2-binary
+    psycopg2-binary \
+    nameparser
 
 ENV HADOOP_CONF_DIR=/opt/spark/conf
 
