@@ -26,29 +26,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Python dependencies — enterprise pipeline + siege_utilities full stack
+# Layer 1: siege_utilities with all extras (heaviest — cache this layer)
 RUN pip install --no-cache-dir \
-    "siege-utilities[geo,data,geodjango,database,h3]>=3.12.1" \
+    "siege-utilities[geo,data,geodjango,database,h3]>=3.12.0"
+
+# Layer 2: Enterprise pipeline CLI deps
+RUN pip install --no-cache-dir \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
     "hydra-core>=1.3.0" \
     "omegaconf>=2.3.0" \
     "rapidfuzz>=3.0.0" \
-    "rich>=13.0.0" \
+    "rich>=13.0.0"
+
+# Layer 3: Django + REST + PostGIS
+RUN pip install --no-cache-dir \
     "Django>=5.0" \
     "djangorestframework>=3.15.0" \
     "djangorestframework-gis>=1.0" \
     "django-cors-headers>=4.0" \
     "django-extensions>=3.0" \
-    "psycopg2-binary>=2.9.0" \
-    "pyarrow>=14.0.0" \
+    "psycopg2-binary>=2.9.0"
+
+# Layer 4: Data processing extras
+RUN pip install --no-cache-dir \
     "duckdb>=0.7.0" \
-    "delta-spark>=3.0.0" \
-    "censusgeocode>=0.5.2" \
-    "geopy>=2.4.1" \
-    "mapclassify>=2.5.0" \
-    "h3>=4.0.0" \
-    "rtree>=1.0.0"
+    "delta-spark>=3.0.0"
 
 # Create directory for enterprise code mount
 RUN mkdir -p /opt/enterprise && chown spark:spark /opt/enterprise
