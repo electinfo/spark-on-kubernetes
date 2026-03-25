@@ -18,20 +18,36 @@ FROM ${REGISTRY}/electinfo/spark-runner:latest
 
 USER root
 
-# System dependencies for full geo stack
+# Install Python 3.11 (base image has 3.10, siege_utilities requires 3.11+)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3.11-distutils \
     libgdal-dev \
     libgeos-dev \
     libproj-dev \
     libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Make Python 3.11 the default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Install pip for Python 3.11
+RUN python3.11 -m ensurepip --upgrade \
+    && python3.11 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
 # Layer 1: siege_utilities with all extras (heaviest — cache this layer)
-RUN pip install --no-cache-dir \
+RUN python3.11 -m pip install --no-cache-dir \
     "siege-utilities[geo,data,geodjango,database,h3]>=3.12.0"
 
 # Layer 2: Enterprise pipeline CLI deps
-RUN pip install --no-cache-dir \
+RUN python3.11 -m pip install --no-cache-dir \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
     "hydra-core>=1.3.0" \
@@ -40,7 +56,7 @@ RUN pip install --no-cache-dir \
     "rich>=13.0.0"
 
 # Layer 3: Django + REST + PostGIS
-RUN pip install --no-cache-dir \
+RUN python3.11 -m pip install --no-cache-dir \
     "Django>=5.0" \
     "djangorestframework>=3.15.0" \
     "djangorestframework-gis>=1.0" \
@@ -49,7 +65,7 @@ RUN pip install --no-cache-dir \
     "psycopg2-binary>=2.9.0"
 
 # Layer 4: Data processing extras
-RUN pip install --no-cache-dir \
+RUN python3.11 -m pip install --no-cache-dir \
     "duckdb>=0.7.0" \
     "delta-spark>=3.0.0"
 
