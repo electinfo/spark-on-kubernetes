@@ -47,7 +47,10 @@ RUN pip install --no-cache-dir playwright xlrd \
     && chmod -R a+rX /opt/playwright
 
 # Stable pipeline Python dependencies (cached normally)
-RUN pip install --no-cache-dir pyyaml pandas zstandard
+RUN pip install --no-cache-dir pyyaml pandas zstandard nameparser
+
+# Splink probabilistic entity resolution + DuckDB backend for dev/testing
+RUN pip install --no-cache-dir "splink[spark]" duckdb
 
 # electinfo-common from Nexus PyPI (cache-busted on each triggered build)
 ARG PIP_CACHE_EPOCH=0
