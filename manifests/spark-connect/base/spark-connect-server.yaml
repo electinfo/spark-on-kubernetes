@@ -359,6 +359,12 @@ data:
     spark.sql.catalog.openelections.token
     spark.sql.catalog.openelections.renewCredential.enabled false
 
+    # OpenStates catalog (state legislators and executives)
+    spark.sql.catalog.openstates                         info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.openstates.uri                     http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.openstates.token
+    spark.sql.catalog.openstates.renewCredential.enabled false
+
     # Alaska Public Offices Commission catalog
     spark.sql.catalog.ak_apoc                            info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.ak_apoc.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
