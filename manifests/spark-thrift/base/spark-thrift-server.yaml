@@ -468,6 +468,12 @@ data:
     spark.sql.catalog.billtrack50.token
     spark.sql.catalog.billtrack50.renewCredential.enabled false
 
+    # Open Civic Data catalog
+    spark.sql.catalog.opencivicdata                      info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.opencivicdata.uri                  http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.opencivicdata.token
+    spark.sql.catalog.opencivicdata.renewCredential.enabled false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
