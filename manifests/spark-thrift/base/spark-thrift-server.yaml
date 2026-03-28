@@ -450,6 +450,24 @@ data:
     spark.sql.catalog.vt_sos.token
     spark.sql.catalog.vt_sos.renewCredential.enabled     false
 
+    # OpenElections catalog
+    spark.sql.catalog.openelections                      info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.openelections.uri                  http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.openelections.token
+    spark.sql.catalog.openelections.renewCredential.enabled false
+
+    # Open States catalog
+    spark.sql.catalog.openstates                         info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.openstates.uri                     http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.openstates.token
+    spark.sql.catalog.openstates.renewCredential.enabled false
+
+    # BillTrack50 catalog
+    spark.sql.catalog.billtrack50                        info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.billtrack50.uri                    http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.billtrack50.token
+    spark.sql.catalog.billtrack50.renewCredential.enabled false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
