@@ -365,6 +365,12 @@ data:
     spark.sql.catalog.openstates.token
     spark.sql.catalog.openstates.renewCredential.enabled false
 
+    # Open Civic Data division IDs catalog
+    spark.sql.catalog.opencivicdata                      info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.opencivicdata.uri                  http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.opencivicdata.token
+    spark.sql.catalog.opencivicdata.renewCredential.enabled false
+
     # Alaska Public Offices Commission catalog
     spark.sql.catalog.ak_apoc                            info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.ak_apoc.uri                        http://app-unity-catalog.electinfo.svc.cluster.local:8080
