@@ -20,4 +20,13 @@
 ARG REGISTRY=registry.container-registry.svc.cluster.local:5000
 FROM ${REGISTRY}/electinfo/spark-base:latest
 
+USER root
+
+# electinfo-common from Nexus PyPI (cache-busted on each triggered build)
+ARG PIP_CACHE_EPOCH=0
+RUN pip install --no-cache-dir \
+    --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
+    --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
+    electinfo-common
+
 USER spark
