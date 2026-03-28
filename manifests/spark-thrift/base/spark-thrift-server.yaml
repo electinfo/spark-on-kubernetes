@@ -264,6 +264,12 @@ data:
     spark.sql.catalog.ga_tcfc.token
     spark.sql.catalog.ga_tcfc.renewCredential.enabled    false
 
+    # GLEIF Legal Entity Identifier catalog
+    spark.sql.catalog.gleif                              info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.gleif.uri                          http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.gleif.token
+    spark.sql.catalog.gleif.renewCredential.enabled      false
+
     # Hawaii Campaign Spending Commission catalog
     spark.sql.catalog.hi_csc                             info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.hi_csc.uri                         http://app-unity-catalog.electinfo.svc.cluster.local:8080
