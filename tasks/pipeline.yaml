@@ -120,6 +120,23 @@ spec:
         - name: argocd-app
           value: util-spark-runner
 
+    - name: restart-splink-runner
+      runAfter:
+        - build-images
+      when:
+        - input: $(tasks.build-images.results.spark-runner-changed)
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: electinfo-restart-deployment
+      params:
+        - name: deployment-name
+          value: splink-runner
+        - name: namespace
+          value: spark
+        - name: argocd-app
+          value: util-splink-runner
+
   finally:
     - name: stabilize-and-refresh
       taskRef:
@@ -138,7 +155,7 @@ spec:
       script: |
         #!/bin/sh
         set -e
-        APPS="app-spark-connect util-spark-runner app-zeppelin"
+        APPS="app-spark-connect util-spark-runner util-splink-runner app-zeppelin"
         TIMEOUT=300
 
         for APP in $APPS; do
