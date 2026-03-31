@@ -132,6 +132,20 @@ public class V1CatalogSync {
                         "' in V1 SessionCatalog (location: " +
                         existing.storage().locationUri() + " -> " +
                         table.storage().locationUri() + ")");
+                } else {
+                    // Check for schema changes (columns added/removed/retyped).
+                    // V1 InMemoryCatalog caches the schema from the first loadTable()
+                    // call. If a pipeline later changes the table's schema, the stale
+                    // V1 entry causes "column number doesn't match" errors.
+                    boolean schemaChanged = !existing.schema().equals(table.schema());
+                    if (schemaChanged) {
+                        v1Catalog.dropTable(ident, true, true);
+                        v1Catalog.createTable(table, true, false);
+                        System.out.println("V1CatalogSync: Replaced table '" + ident +
+                            "' in V1 SessionCatalog (schema changed: " +
+                            existing.schema().fields().length + " cols -> " +
+                            table.schema().fields().length + " cols)");
+                    }
                 }
             } else {
                 v1Catalog.createTable(table, true, false);
