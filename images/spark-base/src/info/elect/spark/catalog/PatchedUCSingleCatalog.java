@@ -121,6 +121,66 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         return null;
     }
 
+    /**
+     * Get the column count of an existing table from the UC REST API.
+     * Returns -1 if the table doesn't exist or the column count can't be determined.
+     */
+    private int getTableColumnCount(String schemaName, String tableName) {
+        try {
+            String fullName = catalogName + "." + schemaName + "." + tableName;
+            URL url = new URL(ucApiBase + "/tables/" + fullName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            if (conn.getResponseCode() == 200) {
+                String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                // Count column entries in the "columns" JSON array
+                int idx = body.indexOf("\"columns\"");
+                if (idx >= 0) {
+                    int count = 0;
+                    int pos = body.indexOf("[", idx);
+                    if (pos >= 0) {
+                        int depth = 0;
+                        for (int i = pos; i < body.length(); i++) {
+                            char c = body.charAt(i);
+                            if (c == '{') {
+                                if (depth == 1) count++; // column object at array level
+                                depth++;
+                            } else if (c == '}') {
+                                depth--;
+                            } else if (c == ']' && depth == 1) {
+                                break;
+                            }
+                        }
+                    }
+                    return count;
+                }
+            }
+        } catch (Exception e) {
+            // fall through
+        }
+        return -1;
+    }
+
+    /**
+     * Count the number of column definitions in a columns JSON array string.
+     */
+    private static int countColumnsInJson(String columnsJson) {
+        int count = 0;
+        int depth = 0;
+        for (int i = 0; i < columnsJson.length(); i++) {
+            char c = columnsJson.charAt(i);
+            if (c == '{') {
+                if (depth == 1) count++;
+                depth++;
+            } else if (c == '}') {
+                depth--;
+            }
+        }
+        return count;
+    }
+
     private void deleteTable(String schemaName, String tableName) {
         try {
             String fullName = catalogName + "." + schemaName + "." + tableName;
@@ -420,7 +480,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             if (status >= 400) {
                 String error = new String(
                     conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-                // Table already exists — check format matches
+                // Table already exists — check format and schema match
                 if (status == 409 || error.contains("already exists")) {
                     String existingFormat = getTableFormat(schemaName, tableName);
                     if (existingFormat != null &&
@@ -429,6 +489,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                         System.out.println("PatchedUCSingleCatalog: Format mismatch for " +
                             schemaName + "." + tableName + " (existing=" + existingFormat +
                             ", requested=" + provider.toUpperCase() + "). Dropping and recreating.");
+                        deleteTable(schemaName, tableName);
+                        return createExternalTable(ident, columnsJson, properties);
+                    }
+                    // Schema mismatch: drop and recreate if column count differs.
+                    // This handles DLP schema evolution (columns added/removed between
+                    // pipeline runs) without requiring a manual server restart or table drop.
+                    int existingCols = getTableColumnCount(schemaName, tableName);
+                    int requestedCols = countColumnsInJson(columnsJson);
+                    if (existingCols > 0 && requestedCols > 0 && existingCols != requestedCols) {
+                        System.out.println("PatchedUCSingleCatalog: Schema mismatch for " +
+                            schemaName + "." + tableName + " (existing=" + existingCols +
+                            " cols, requested=" + requestedCols + " cols). Dropping and recreating.");
                         deleteTable(schemaName, tableName);
                         return createExternalTable(ident, columnsJson, properties);
                     }
