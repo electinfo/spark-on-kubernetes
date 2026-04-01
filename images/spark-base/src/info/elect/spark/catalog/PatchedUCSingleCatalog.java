@@ -22,6 +22,7 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.connector.catalog.StagedTable;
+import org.apache.spark.sql.connector.catalog.TableCapability;
 import org.apache.spark.sql.connector.catalog.TruncatableTable;
 import org.apache.spark.sql.connector.catalog.V1Table;
 
@@ -830,6 +831,13 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         TruncatableV1Table(V1Table original, Identifier ident) {
             super(original.v1Table());
             this.ident = ident;
+        }
+
+        @Override
+        public Set<TableCapability> capabilities() {
+            Set<TableCapability> caps = new java.util.HashSet<>(super.capabilities());
+            caps.add(TableCapability.TRUNCATE);
+            return caps;
         }
 
         @Override
