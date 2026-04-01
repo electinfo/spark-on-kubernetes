@@ -198,6 +198,12 @@ data:
     spark.sql.catalog.congress_gov.token
     spark.sql.catalog.congress_gov.renewCredential.enabled false
 
+    # Enterprise FEC electronic filings catalog
+    spark.sql.catalog.enterprise_fec                    info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.enterprise_fec.uri                http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.enterprise_fec.token
+    spark.sql.catalog.enterprise_fec.renewCredential.enabled false
+
     # FEC Filings catalog
     spark.sql.catalog.fec_filings                       info.elect.spark.catalog.PatchedUCSingleCatalog
     spark.sql.catalog.fec_filings.uri                   http://app-unity-catalog.electinfo.svc.cluster.local:8080
