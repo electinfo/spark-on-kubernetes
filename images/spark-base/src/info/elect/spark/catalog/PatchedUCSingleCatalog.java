@@ -504,7 +504,14 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                         deleteTable(schemaName, tableName);
                         return createExternalTable(ident, columnsJson, properties);
                     }
-                    return loadTable(ident);
+                    // Skip V1 sync — same as fresh create: the V1 write path
+                    // will create the V1 entry after writing data.
+                    try {
+                        return loadTableSkipV1Sync(ident);
+                    } catch (Exception ex) {
+                        throw new RuntimeException(
+                            "createTable: table exists in UC but loadTable failed for " + ident, ex);
+                    }
                 }
                 throw new RuntimeException(
                     "UC REST API createTable " + status + ": " + error);
@@ -515,8 +522,12 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             throw new RuntimeException("Failed to create external table via UC API", e);
         }
 
+        // Skip V1 sync — the table was just created and has no S3 data yet.
+        // The V1 write path (CreateDataSourceTableAsSelectCommand) will create
+        // the V1 SessionCatalog entry itself. Pre-registering via syncTable
+        // causes LOCATION_ALREADY_EXISTS when the V1 write validates the location.
         try {
-            return loadTable(ident);
+            return loadTableSkipV1Sync(ident);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -658,6 +669,38 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("alterTable: failed to load table " + ident, e);
+        }
+    }
+
+    /**
+     * Load a table from UC without syncing to V1 SessionCatalog.
+     *
+     * Used by createExternalTable() — the table was just created and has no S3
+     * data yet. The V1 write path (CreateDataSourceTableAsSelectCommand) will
+     * create the V1 entry itself after writing data. Pre-syncing V1 causes
+     * LOCATION_ALREADY_EXISTS because validateTableLocation() finds the V1 entry
+     * before the V1 write path can create it.
+     */
+    private Table loadTableSkipV1Sync(Identifier ident) throws Exception {
+        if (ident.namespace().length > 0) {
+            String schemaName = ident.namespace()[0];
+            String storageRoot = schemaStorageRoots.computeIfAbsent(
+                schemaName, this::getSchemaStorageRoot);
+            org.apache.spark.sql.V1CatalogSync.ensureSchemaExists(
+                schemaName, storageRoot);
+        }
+
+        synchronized (this) {
+            ensureCleanS3ACache();
+            Table table = super.loadTable(ident);
+            restoreS3ACredentialProvider();
+
+            if (table instanceof V1Table) {
+                V1Table cleaned = stripUCStorageCredentials((V1Table) table);
+                // No V1 syncTable — caller is createExternalTable
+                return new TruncatableV1Table(cleaned, ident);
+            }
+            return table;
         }
     }
 
