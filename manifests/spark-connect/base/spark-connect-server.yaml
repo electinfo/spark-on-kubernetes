@@ -129,7 +129,7 @@ data:
     spark.sql.extensions                                 org.apache.sedona.sql.SedonaSqlExtensions
     spark.serializer                                     org.apache.spark.serializer.KryoSerializer
     spark.kryo.registrator                               org.apache.sedona.core.serde.SedonaKryoRegistrator
-    spark.jars.repositories                               https://repo.elect.info/repository/maven-public/
+    spark.jars.repositories                               https://repo.elect.info/repository/maven-public/,https://repo1.maven.org/maven2/
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
     # Patched UC catalog JAR (loaded alongside spark.jars.packages for same classloader)
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
