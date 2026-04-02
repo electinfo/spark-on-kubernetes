@@ -757,11 +757,24 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                 // non-session catalogs (census, tec) are not found when the V1
                 // fallback strips the catalog and resolves against spark_catalog.
                 org.apache.spark.sql.V1CatalogSync.syncTable(cleaned.v1Table());
-                return new TruncatableV1Table(cleaned, ident);
+                TruncatableV1Table wrapped = new TruncatableV1Table(cleaned, ident);
+                System.out.println("PatchedUCSingleCatalog.loadTable: " +
+                    ident.namespace()[0] + "." + ident.name() +
+                    " -> TruncatableV1Table (class=" + wrapped.getClass().getName() +
+                    ", truncatable=" + (wrapped instanceof TruncatableTable) +
+                    ", caps=" + wrapped.capabilities() + ")");
+                return wrapped;
             }
             if (table instanceof TruncatableTable) {
+                System.out.println("PatchedUCSingleCatalog.loadTable: " +
+                    ident.namespace()[0] + "." + ident.name() +
+                    " -> existing TruncatableTable (class=" + table.getClass().getName() + ")");
                 return table;
             }
+            System.out.println("PatchedUCSingleCatalog.loadTable: " +
+                ident.namespace()[0] + "." + ident.name() +
+                " -> plain table (class=" + table.getClass().getName() +
+                ", caps=" + table.capabilities() + ")");
             return table;
         }
     }
@@ -837,6 +850,11 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         public Set<TableCapability> capabilities() {
             Set<TableCapability> caps = new java.util.HashSet<>(super.capabilities());
             caps.add(TableCapability.TRUNCATE);
+            caps.add(TableCapability.OVERWRITE_BY_FILTER);
+            caps.add(TableCapability.OVERWRITE_DYNAMIC);
+            System.out.println("TruncatableV1Table.capabilities() for " +
+                ident.namespace()[0] + "." + ident.name() +
+                " -> " + caps + " (class=" + this.getClass().getName() + ")");
             return caps;
         }
 
