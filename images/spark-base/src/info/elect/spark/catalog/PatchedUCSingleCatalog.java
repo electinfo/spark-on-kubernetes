@@ -835,16 +835,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
         @Override
         public Set<TableCapability> capabilities() {
-            // Build capability set from scratch — do NOT inherit V1_BATCH_WRITE from
-            // V1Table.capabilities(). V1_BATCH_WRITE causes V2Writes to convert
-            // OverwriteByExpression into a V1 write plan, which re-resolves the table
-            // through spark_catalog (V1 SessionCatalog) where it's a plain V1Table
-            // without TRUNCATE support. By omitting V1_BATCH_WRITE and adding TRUNCATE +
-            // OVERWRITE_BY_FILTER, Spark stays on the V2 write path and uses our
-            // TruncatableV1Table directly.
+            // Build capability set from scratch — V1Table.capabilities() returns EMPTY
+            // in Spark 4.1 (EnumSet.noneOf). Must declare all needed capabilities:
+            // - BATCH_READ/BATCH_WRITE: required by supportsBatchWrite() in TableCapabilityCheck
+            // - V1_BATCH_WRITE: triggers V2Writes to convert OverwriteByExpression to V1 plan
+            //   BEFORE TableCapabilityCheck runs, so V1's file-based overwrite handles truncation
+            //   via file deletion (no TruncatableTable check needed on V1 path)
+            // - TRUNCATE/OVERWRITE_BY_FILTER/OVERWRITE_DYNAMIC: safety net if any V2 check
+            //   runs before V2Writes conversion
             Set<TableCapability> caps = new java.util.HashSet<>();
             caps.add(TableCapability.BATCH_READ);
             caps.add(TableCapability.BATCH_WRITE);
+            caps.add(TableCapability.V1_BATCH_WRITE);
             caps.add(TableCapability.TRUNCATE);
             caps.add(TableCapability.OVERWRITE_BY_FILTER);
             caps.add(TableCapability.OVERWRITE_DYNAMIC);
