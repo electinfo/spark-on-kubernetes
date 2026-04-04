@@ -474,6 +474,13 @@ data:
     spark.sql.catalog.opencivicdata.token
     spark.sql.catalog.opencivicdata.renewCredential.enabled false
 
+
+    # Zatelso client data catalog catalog
+    spark.sql.catalog.zatelso                         info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.zatelso.uri                     http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.zatelso.token
+    spark.sql.catalog.zatelso.renewCredential.enabled false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
