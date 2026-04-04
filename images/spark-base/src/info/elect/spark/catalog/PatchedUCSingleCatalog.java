@@ -757,24 +757,11 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                 // non-session catalogs (census, tec) are not found when the V1
                 // fallback strips the catalog and resolves against spark_catalog.
                 org.apache.spark.sql.V1CatalogSync.syncTable(cleaned.v1Table());
-                TruncatableV1Table wrapped = new TruncatableV1Table(cleaned, ident);
-                System.out.println("PatchedUCSingleCatalog.loadTable: " +
-                    ident.namespace()[0] + "." + ident.name() +
-                    " -> TruncatableV1Table (class=" + wrapped.getClass().getName() +
-                    ", truncatable=" + (wrapped instanceof TruncatableTable) +
-                    ", caps=" + wrapped.capabilities() + ")");
-                return wrapped;
+                return new TruncatableV1Table(cleaned, ident);
             }
             if (table instanceof TruncatableTable) {
-                System.out.println("PatchedUCSingleCatalog.loadTable: " +
-                    ident.namespace()[0] + "." + ident.name() +
-                    " -> existing TruncatableTable (class=" + table.getClass().getName() + ")");
                 return table;
             }
-            System.out.println("PatchedUCSingleCatalog.loadTable: " +
-                ident.namespace()[0] + "." + ident.name() +
-                " -> plain table (class=" + table.getClass().getName() +
-                ", caps=" + table.capabilities() + ")");
             return table;
         }
     }
@@ -848,13 +835,19 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
         @Override
         public Set<TableCapability> capabilities() {
-            Set<TableCapability> caps = new java.util.HashSet<>(super.capabilities());
+            // Build capability set from scratch — do NOT inherit V1_BATCH_WRITE from
+            // V1Table.capabilities(). V1_BATCH_WRITE causes V2Writes to convert
+            // OverwriteByExpression into a V1 write plan, which re-resolves the table
+            // through spark_catalog (V1 SessionCatalog) where it's a plain V1Table
+            // without TRUNCATE support. By omitting V1_BATCH_WRITE and adding TRUNCATE +
+            // OVERWRITE_BY_FILTER, Spark stays on the V2 write path and uses our
+            // TruncatableV1Table directly.
+            Set<TableCapability> caps = new java.util.HashSet<>();
+            caps.add(TableCapability.BATCH_READ);
+            caps.add(TableCapability.BATCH_WRITE);
             caps.add(TableCapability.TRUNCATE);
             caps.add(TableCapability.OVERWRITE_BY_FILTER);
             caps.add(TableCapability.OVERWRITE_DYNAMIC);
-            System.out.println("TruncatableV1Table.capabilities() for " +
-                ident.namespace()[0] + "." + ident.name() +
-                " -> " + caps + " (class=" + this.getClass().getName() + ")");
             return caps;
         }
 
