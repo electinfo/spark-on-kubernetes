@@ -57,7 +57,8 @@ spec:
                 --conf spark.sql.catalog.spark_catalog.token= \
                 --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo \
                 --conf spark.driver.maxResultSize=4g \
-                --conf spark.executor.extraClassPath=/opt/spark/work-dir/*
+                --conf spark.driver.extraClassPath=/opt/spark/custom-jars/*:/opt/spark/work-dir/* \
+                --conf spark.executor.extraClassPath=/opt/spark/custom-jars/*:/opt/spark/work-dir/*
           env:
             - name: POD_IP
               valueFrom:
@@ -126,7 +127,7 @@ data:
     spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410,org.opensearch.client:opensearch-spark-40_2.13:1.3.0-spark411
     spark.jars.repositories                               https://repo.elect.info/repository/maven-public/
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
-    # Patched UC catalog JAR (Sedona JAR removed — was crashing executors, needs proper NFS mount)
+    # Patched UC catalog JAR (Sedona JAR removed -- was crashing executors, needs proper NFS mount)
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
 
     # Spark Connect session management
@@ -502,10 +503,11 @@ data:
     spark.executor.cores                                 4
     spark.executor.memory                                24g
     spark.driver.memory                                  8g
-    # Include distributed JARs (from spark.jars.packages) on executor system classpath.
-    # Without this, /opt/spark/work-dir is on the classpath as a directory (no wildcard),
-    # so Hadoop's classloader can't find classes in JARs there (e.g., AwsVendedTokenProvider).
-    spark.executor.extraClassPath                        /opt/spark/work-dir/*
+    # Include custom JARs and distributed JARs on driver and executor classpath.
+    # custom-jars contains spark-catalog-patch-1.0.jar needed for catalog plugin loading.
+    # work-dir contains JARs from spark.jars.packages (e.g., AwsVendedTokenProvider).
+    spark.driver.extraClassPath                          /opt/spark/custom-jars/*:/opt/spark/work-dir/*
+    spark.executor.extraClassPath                        /opt/spark/custom-jars/*:/opt/spark/work-dir/*
 
     # Dynamic allocation
     spark.dynamicAllocation.enabled                      true
