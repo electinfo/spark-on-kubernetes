@@ -39,6 +39,7 @@
   </dependencies>
 
   <build>
+    <finalName>spark-catalog-patch</finalName>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>

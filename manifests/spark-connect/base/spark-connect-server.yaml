@@ -128,7 +128,7 @@ data:
     spark.jars.repositories                               https://repo.elect.info/repository/maven-public/
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
     # Patched UC catalog JAR (also loaded via --driver-class-path for early classloader access)
-    spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch-1.0.jar
+    spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch.jar
 
     # Spark Connect session management
     # Prevent session reaping during long-running writes (e.g. 196M voter nodes to Neo4j)

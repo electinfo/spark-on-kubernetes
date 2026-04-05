@@ -63,7 +63,7 @@ COPY --from=deps /deps/jars/*.jar /opt/spark/jars/
 # Copy patched UC catalog JAR and operator deps to separate dir (loaded via spark.jars, not system classpath)
 # Must be loaded by same classloader as UC connector to avoid ClassCastException
 RUN mkdir -p /opt/spark/custom-jars
-COPY --from=deps /catalog-patch/target/spark-catalog-patch-1.2.jar /opt/spark/custom-jars/
+COPY --from=deps /catalog-patch/target/spark-catalog-patch.jar /opt/spark/custom-jars/
 COPY --from=deps /operator-deps/jars/*.jar /opt/spark/custom-jars/
 
 # Extract AwsVendedTokenProvider shim into a SEPARATE JAR on the system classpath.
@@ -71,7 +71,7 @@ COPY --from=deps /operator-deps/jars/*.jar /opt/spark/custom-jars/
 # Configuration.getClassByName() uses the system classloader (not Spark's child classloader).
 # This shim extends SimpleAWSCredentialsProvider and uses MinIO static credentials.
 RUN cd /tmp && \
-    jar xf /opt/spark/custom-jars/spark-catalog-patch-1.2.jar \
+    jar xf /opt/spark/custom-jars/spark-catalog-patch.jar \
         io/unitycatalog/spark/auth/storage/AwsVendedTokenProvider.class && \
     jar cf /opt/spark/jars/aws-vended-token-shim.jar \
         io/unitycatalog/spark/auth/storage/AwsVendedTokenProvider.class && \

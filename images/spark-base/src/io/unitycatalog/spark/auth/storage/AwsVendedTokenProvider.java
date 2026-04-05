@@ -14,7 +14,7 @@ import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
  * reads the static MinIO credentials (fs.s3a.access.key / fs.s3a.secret.key)
  * from spark-defaults.conf.
  *
- * With this shim on the classpath (in spark-catalog-patch-1.0.jar), the
+ * With this shim on the classpath (in spark-catalog-patch.jar), the
  * ClassNotFoundException race condition between UC's config poisoning and
  * DLP's parallel FileSystem creation is eliminated entirely.
  */
