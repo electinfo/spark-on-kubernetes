@@ -86,6 +86,23 @@ spec:
         - name: argocd-app
           value: app-spark-connect
 
+    - name: restart-spark-thrift
+      runAfter:
+        - build-images
+      when:
+        - input: $(tasks.build-images.results.spark-connect-changed)
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: electinfo-restart-deployment
+      params:
+        - name: deployment-name
+          value: spark-thrift-server
+        - name: namespace
+          value: spark
+        - name: argocd-app
+          value: app-spark-thrift
+
     - name: restart-zeppelin
       runAfter:
         - build-images
@@ -155,7 +172,7 @@ spec:
       script: |
         #!/bin/sh
         set -e
-        APPS="app-spark-connect util-spark-runner util-splink-runner app-zeppelin"
+        APPS="app-spark-connect app-spark-thrift util-spark-runner util-splink-runner app-zeppelin"
         TIMEOUT=300
 
         for APP in $APPS; do
@@ -187,6 +204,8 @@ spec:
           case "$APP" in
             app-spark-connect)
               DEPLOY="spark-connect-server"; NS="spark" ;;
+            app-spark-thrift)
+              DEPLOY="spark-thrift-server"; NS="spark" ;;
             util-spark-runner)
               DEPLOY="spark-runner"; NS="spark" ;;
             app-zeppelin)

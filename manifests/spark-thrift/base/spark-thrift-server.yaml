@@ -63,9 +63,19 @@ spec:
               # the system classloader. Other deps (Jackson, Netty, etc.) are already
               # in Spark's jars/ or will be loaded lazily from the child classloader.
               echo "Copying UC catalog JARs to system classpath..."
-              cp /opt/spark/custom-jars/spark-catalog-patch-1.0.jar /opt/spark/jars/
-              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-spark_*.jar /opt/spark/jars/
-              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-client-*.jar /opt/spark/jars/
+              cp /opt/spark/custom-jars/spark-catalog-patch-1.0.jar /opt/spark/jars/ || {
+                echo "FATAL: spark-catalog-patch-1.0.jar not found in image — PatchedUCSingleCatalog will fail"
+                echo "Contents of /opt/spark/custom-jars/:"
+                ls -la /opt/spark/custom-jars/ 2>&1 || true
+              }
+              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-spark_*.jar /opt/spark/jars/ || {
+                echo "FATAL: unitycatalog-spark JAR not found in Ivy cache — catalog plugin will fail"
+                echo "Contents of /nonexistent/.ivy2.5.2/jars/:"
+                ls -la /nonexistent/.ivy2.5.2/jars/ 2>&1 || true
+              }
+              cp /nonexistent/.ivy2.5.2/jars/io.unitycatalog_unitycatalog-client-*.jar /opt/spark/jars/ || {
+                echo "FATAL: unitycatalog-client JAR not found in Ivy cache — catalog REST calls will fail"
+              }
 
               # Start Spark Thrift Server (HiveServer2 protocol on port 10000)
               exec /opt/spark/sbin/start-thriftserver.sh \
