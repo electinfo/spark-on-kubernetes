@@ -95,6 +95,9 @@ spec:
               mountPath: /nonexistent
             - name: spark-local
               mountPath: /tmp/spark-local
+            - name: splink-tmp
+              mountPath: /mnt/splink-tmp
+              readOnly: true
       volumes:
         - name: spark-conf
           configMap:
@@ -106,6 +109,10 @@ spec:
         - name: spark-local
           hostPath:
             path: /mnt/md/nvme/spark-connect/spark-local
+            type: DirectoryOrCreate
+        - name: splink-tmp
+          hostPath:
+            path: /mnt/md/nvme/splink-runner/tmp
             type: DirectoryOrCreate
 
 ---
