@@ -64,10 +64,11 @@ RUN python3.11 -m pip install --no-cache-dir \
     "django-extensions>=3.0" \
     "psycopg2-binary>=2.9.0"
 
-# Layer 4: Data processing extras
+# Layer 4: Data processing extras + Spark Connect deps
 RUN python3.11 -m pip install --no-cache-dir \
     "duckdb>=0.7.0" \
-    "delta-spark>=3.0.0"
+    "delta-spark>=3.0.0" \
+    "pyspark[connect]>=4.0.0"
 
 # Create directory for enterprise code mount
 RUN mkdir -p /opt/enterprise && chown spark:spark /opt/enterprise
