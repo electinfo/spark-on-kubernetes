@@ -47,7 +47,8 @@ RUN pip install --no-cache-dir playwright xlrd \
     && chmod -R a+rX /opt/playwright
 
 # Stable pipeline Python dependencies (cached normally)
-RUN pip install --no-cache-dir pyyaml pandas zstandard nameparser
+RUN pip install --no-cache-dir pyyaml pandas zstandard nameparser \
+    "pydantic>=2.0.0" "hydra-core>=1.3.0" "omegaconf>=2.3.0"
 
 # Splink probabilistic entity resolution + DuckDB backend for dev/testing
 RUN pip install --no-cache-dir "splink[spark]" duckdb
