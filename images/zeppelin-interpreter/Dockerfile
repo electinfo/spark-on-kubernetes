@@ -36,6 +36,7 @@ USER root
 COPY --from=zeppelin /opt/zeppelin/bin /opt/zeppelin/bin
 COPY --from=zeppelin /opt/zeppelin/conf /opt/zeppelin/conf
 COPY --from=zeppelin /opt/zeppelin/interpreter/spark /opt/zeppelin/interpreter/spark
+COPY --from=zeppelin /opt/zeppelin/interpreter/jdbc /opt/zeppelin/interpreter/jdbc
 COPY --from=zeppelin /opt/zeppelin/interpreter/zeppelin-interpreter-shaded-0.12.0.jar /opt/zeppelin/interpreter/
 
 # Create logs directory and set permissions for spark user (uid 185)
