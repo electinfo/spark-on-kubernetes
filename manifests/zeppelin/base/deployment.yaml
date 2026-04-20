@@ -103,14 +103,17 @@ spec:
             - "sh"
             - "-c"
             - |
-              # Background process to patch interpreter.json after Zeppelin creates it
+              # Patch interpreter.json at startup to enforce config-as-code settings.
+              # Runs in background, waits for Zeppelin to create the file (or finds it on PVC).
               (
                 CONF_FILE="${ZEPPELIN_HOME}/conf/interpreter.json"
+                PATCH_SCRIPT="${ZEPPELIN_HOME}/conf/patch-interpreter.py"
                 for i in $(seq 1 60); do
                   sleep 5
-                  if [ -f "$CONF_FILE" ] && grep -q '"value": true' "$CONF_FILE"; then
-                    sed -i '/enableSupportedVersionCheck/,/}/ s/"value": true/"value": false/' "$CONF_FILE"
-                    echo "Patched interpreter.json to disable Spark version check"
+                  if [ -f "$CONF_FILE" ]; then
+                    python3 "$PATCH_SCRIPT" "$CONF_FILE" && \
+                      echo "Interpreter settings patched" || \
+                      echo "Interpreter patch failed"
                     break
                   fi
                 done
@@ -149,6 +152,9 @@ spec:
             - name: zeppelin-conf
               mountPath: /opt/zeppelin/conf/interpreter-settings.json
               subPath: interpreter-settings.json
+            - name: zeppelin-conf
+              mountPath: /opt/zeppelin/conf/patch-interpreter.py
+              subPath: patch-interpreter.py
             - name: zeppelin-conf
               mountPath: /opt/zeppelin/interpreter/spark/interpreter-setting.json
               subPath: spark-interpreter-setting.json

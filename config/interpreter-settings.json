@@ -15,5 +15,11 @@
     "spark.hadoop.hive.metastore.uris": "thrift://app-hive.electinfo.svc.cluster.local:9083",
     "spark.sql.warehouse.dir": "s3a://hive-warehouse/",
     "spark.jars.packages": "org.apache.hadoop:hadoop-aws:3.4.2,io.graphframes:graphframes-spark4_2.13:0.10.0"
+  },
+  "jdbc": {
+    "default.driver": "org.postgresql.Driver",
+    "default.url": "jdbc:postgresql://db-postgis-master.default.svc.cluster.local:5432/electinfo",
+    "default.user": "postgres",
+    "default.password": "electinfo"
   }
 }
