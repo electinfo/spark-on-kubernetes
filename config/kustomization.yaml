@@ -21,6 +21,7 @@ configMapGenerator:
       - interpreter-settings.json
       - log4j.properties
       - spark-interpreter-setting.json
+      - jdbc-interpreter-setting.json
       - patch-interpreter.py
 
 generatorOptions:
