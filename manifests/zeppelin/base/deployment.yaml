@@ -103,17 +103,35 @@ spec:
             - "sh"
             - "-c"
             - |
-              # Patch interpreter.json at startup to enforce config-as-code settings.
-              # Runs in background, waits for Zeppelin to create the file (or finds it on PVC).
+              # Patch interpreter.json at startup, then restart affected interpreters
+              # via the REST API so Zeppelin picks up the changes from its in-memory state.
+              # Phase 1: wait for interpreter.json and patch it on disk.
+              # Phase 2: wait for the REST API, then restart interpreters with changed options.
               (
                 CONF_FILE="${ZEPPELIN_HOME}/conf/interpreter.json"
                 PATCH_SCRIPT="${ZEPPELIN_HOME}/conf/patch-interpreter.py"
+                ZEPPELIN_API="http://localhost:8080/api"
+
+                # Wait for Zeppelin to create interpreter.json
                 for i in $(seq 1 60); do
                   sleep 5
                   if [ -f "$CONF_FILE" ]; then
                     python3 "$PATCH_SCRIPT" "$CONF_FILE" && \
                       echo "Interpreter settings patched" || \
                       echo "Interpreter patch failed"
+                    break
+                  fi
+                done
+
+                # Wait for REST API to become available, then restart interpreters
+                # whose option.remote was changed so Zeppelin reloads from disk.
+                for j in $(seq 1 60); do
+                  sleep 5
+                  if wget -qO- "${ZEPPELIN_API}/version" > /dev/null 2>&1; then
+                    echo "Zeppelin API ready — restarting interpreters"
+                    wget -q --method=PUT "${ZEPPELIN_API}/interpreter/setting/restart/md" \
+                      && echo "md interpreter restarted (remote=false)" \
+                      || echo "md interpreter restart failed"
                     break
                   fi
                 done
