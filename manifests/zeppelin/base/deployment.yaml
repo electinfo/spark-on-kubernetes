@@ -123,15 +123,19 @@ spec:
                   fi
                 done
 
-                # Wait for REST API to become available, then restart interpreters
-                # whose option.remote was changed so Zeppelin reloads from disk.
+                # Wait for REST API to become available, then UPDATE the md interpreter
+                # setting in-memory (restart only reloads the process, not the settings).
                 for j in $(seq 1 60); do
                   sleep 5
                   if wget -qO- "${ZEPPELIN_API}/version" > /dev/null 2>&1; then
-                    echo "Zeppelin API ready — restarting interpreters"
-                    wget -q --method=PUT "${ZEPPELIN_API}/interpreter/setting/restart/md" \
-                      && echo "md interpreter restarted (remote=false)" \
-                      || echo "md interpreter restart failed"
+                    echo "Zeppelin API ready — applying in-memory interpreter settings"
+                    wget -q -O- \
+                      --method=PUT \
+                      --header="Content-Type: application/json" \
+                      --body-data='{"name":"md","group":"md","properties":{"markdown.parser.type":{"name":"markdown.parser.type","value":"flexmark","type":"string","description":"Markdown Parser Type"}},"dependencies":[],"option":{"remote":false,"port":-1,"isExistingProcess":false,"setPermission":false,"owners":[],"isUserImpersonate":false}}' \
+                      "${ZEPPELIN_API}/interpreter/setting/md" \
+                      && echo "md interpreter updated: remote=false" \
+                      || echo "md interpreter update failed"
                     break
                   fi
                 done
