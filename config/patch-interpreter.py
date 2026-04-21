@@ -20,6 +20,10 @@ for k, s in c.get("interpreterSettings", {}).items():
             if "enableSupportedVersionCheck" in pkey and isinstance(pval, dict):
                 pval["value"] = "false"
 
+    # Markdown: run in-process (no K8s pod) — interpreter pods for %md always fail
+    if s.get("group") == "md":
+        s.setdefault("option", {})["remote"] = False
+
     # JDBC: point to db-postgis in default namespace
     if s.get("group") == "jdbc":
         p = s.get("properties", {})
