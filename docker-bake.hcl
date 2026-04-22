@@ -145,10 +145,7 @@ target "zeppelin-interpreter" {
 target "enterprise-runner" {
   context = "images/enterprise-runner"
   dockerfile = "Dockerfile"
-  tags = [
-    "${REGISTRY}/electinfo/enterprise-runner:${TAG}",
-    "localhost:32000/electinfo/enterprise-runner:${TAG}",
-  ]
+  tags = ["${REGISTRY}/electinfo/enterprise-runner:${TAG}"]
   platforms = ["linux/amd64"]
   no-cache = true
   args = {
@@ -164,10 +161,7 @@ target "enterprise-runner" {
 target "fec-runner" {
   context = "images/fec-runner"
   dockerfile = "Dockerfile"
-  tags = [
-    "${REGISTRY}/electinfo/fec-cli:${TAG}",
-    "localhost:32000/electinfo/fec-cli:${TAG}",
-  ]
+  tags = ["${REGISTRY}/electinfo/fec-cli:${TAG}"]
   platforms = ["linux/amd64"]
   no-cache = true
   args = {
