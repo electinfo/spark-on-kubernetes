@@ -69,6 +69,26 @@ RUN python3.11 -m pip install --no-cache-dir \
     "duckdb>=0.7.0" \
     "delta-spark>=3.0.0"
 
+# Layer 5: Spark Connect client (ELE-2255)
+RUN python3.11 -m pip install --no-cache-dir \
+    "pyspark[connect]>=3.5.0"
+
+# Install kubectl (required for SparkOperator job submission via kubectl apply)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https ca-certificates curl gnupg \
+    && curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key \
+       | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg \
+    && echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' \
+       > /etc/apt/sources.list.d/kubernetes.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends kubectl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install gdal-bin / ogr2ogr for spatial ingest jobs (ELE-2354)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create directory for enterprise code mount
 RUN mkdir -p /opt/enterprise && chown spark:spark /opt/enterprise
 
