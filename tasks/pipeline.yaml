@@ -409,6 +409,9 @@ spec:
         [registry."registry.container-registry.svc.cluster.local:5000"]
           http = true
           insecure = true
+
+        [worker.oci]
+          networkMode = "host"
         EOF
 
         # Remove any existing builder to ensure fresh config
