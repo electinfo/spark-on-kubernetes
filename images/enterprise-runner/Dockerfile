@@ -54,7 +54,8 @@ RUN python3.11 -m pip install --no-cache-dir \
     "omegaconf>=2.3.0" \
     "rapidfuzz>=3.0.0" \
     "rich>=13.0.0" \
-    "kafka-python>=2.0.0"
+    "kafka-python>=2.0.0" \
+    "boto3>=1.28.0"
 
 # Layer 3: Django + REST + PostGIS
 RUN python3.11 -m pip install --no-cache-dir \
