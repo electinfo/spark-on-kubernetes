@@ -19,13 +19,12 @@ USER root
 # (geopandas, shapely, pyproj, fiona, gdal-bin, libgdal-dev already in spark-runner)
 RUN pip install --no-cache-dir \
     --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
-    --extra-index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-hosted/simple/ \
     --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
     "hydra-core>=1.3.0" \
     "omegaconf>=2.3.0" \
-    "siege-utilities>=3.4.0" \
+    "siege-utilities @ http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-hosted/packages/siege-utilities/3.13.2/siege_utilities-3.13.2-py3-none-any.whl" \
     "rapidfuzz>=3.0.0" \
     "rich>=13.0.0" \
     "Django>=5.0" \
