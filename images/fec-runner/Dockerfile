@@ -19,6 +19,7 @@ USER root
 # (geopandas, shapely, pyproj, fiona, gdal-bin, libgdal-dev already in spark-runner)
 RUN pip install --no-cache-dir \
     --extra-index-url https://repo.elect.info/repository/pypi-hosted/simple/ \
+    --trusted-host repo.elect.info \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
     "hydra-core>=1.3.0" \
