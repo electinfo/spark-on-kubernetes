@@ -18,6 +18,7 @@ USER root
 # (pyspark, pyarrow, pandas, boto3, grpcio, PyYAML, requests already in base)
 # (geopandas, shapely, pyproj, fiona, gdal-bin, libgdal-dev already in spark-runner)
 RUN pip install --no-cache-dir \
+    --ignore-requires-python \
     --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
     --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
     "typer[all]>=0.9.0" \
