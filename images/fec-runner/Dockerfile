@@ -18,8 +18,8 @@ USER root
 # (pyspark, pyarrow, pandas, boto3, grpcio, PyYAML, requests already in base)
 # (geopandas, shapely, pyproj, fiona, gdal-bin, libgdal-dev already in spark-runner)
 RUN pip install --no-cache-dir \
-    --extra-index-url https://repo.elect.info/repository/pypi-hosted/simple/ \
-    --trusted-host repo.elect.info \
+    --extra-index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-hosted/simple/ \
+    --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
     "typer[all]>=0.9.0" \
     "pydantic>=2.0.0" \
     "hydra-core>=1.3.0" \
