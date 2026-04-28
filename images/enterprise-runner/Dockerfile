@@ -53,7 +53,8 @@ RUN python3.11 -m pip install --no-cache-dir \
     "hydra-core>=1.3.0" \
     "omegaconf>=2.3.0" \
     "rapidfuzz>=3.0.0" \
-    "rich>=13.0.0"
+    "rich>=13.0.0" \
+    "kafka-python>=2.0.0"
 
 # Layer 3: Django + REST + PostGIS
 RUN python3.11 -m pip install --no-cache-dir \
