@@ -23,6 +23,7 @@ configMapGenerator:
       - spark-interpreter-setting.json
       - jdbc-interpreter-setting.json
       - patch-interpreter.py
+      - apply-runtime-overrides.py
 
 generatorOptions:
   disableNameSuffixHash: true
