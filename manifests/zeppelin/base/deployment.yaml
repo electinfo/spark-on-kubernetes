@@ -123,19 +123,63 @@ spec:
                   fi
                 done
 
-                # Wait for REST API to become available, then UPDATE the md interpreter
-                # setting in-memory (restart only reloads the process, not the settings).
+                # Wait for REST API to become available, then UPDATE every interpreter
+                # whose group appears in interpreter-overrides.json. The disk patch in
+                # Phase 1 only updates interpreter.json; Zeppelin loads its in-memory
+                # state once at startup and re-writes the file from memory on changes,
+                # so a runtime PUT is required for the override values to actually take
+                # effect (otherwise Zeppelin uses the original defaults).
                 for j in $(seq 1 60); do
                   sleep 5
                   if wget -qO- "${ZEPPELIN_API}/version" > /dev/null 2>&1; then
                     echo "Zeppelin API ready — applying in-memory interpreter settings"
-                    wget -q -O- \
-                      --method=PUT \
-                      --header="Content-Type: application/json" \
-                      --body-data='{"name":"md","group":"md","properties":{"markdown.parser.type":{"name":"markdown.parser.type","value":"flexmark","type":"string","description":"Markdown Parser Type"}},"dependencies":[],"option":{"remote":false,"port":-1,"isExistingProcess":false,"setPermission":false,"owners":[],"isUserImpersonate":false}}' \
-                      "${ZEPPELIN_API}/interpreter/setting/md" \
-                      && echo "md interpreter updated: remote=false" \
-                      || echo "md interpreter update failed"
+                    python3 - <<'PY'
+import json, os, urllib.request
+
+api = os.environ.get("ZEPPELIN_API_URL", "http://localhost:8080/api")
+notebook_dir = os.environ.get("ZEPPELIN_NOTEBOOK_DIR", "/opt/zeppelin/notebook")
+overrides_path = os.path.join(notebook_dir, "conf", "interpreter-overrides.json")
+
+if not os.path.exists(overrides_path):
+    print(f"No overrides at {overrides_path}; skipping API update")
+    raise SystemExit(0)
+
+overrides = json.load(open(overrides_path))
+with urllib.request.urlopen(f"{api}/interpreter/setting") as r:
+    settings = json.load(r)["body"]
+
+for setting in settings:
+    group = setting.get("group")
+    if group not in overrides:
+        continue
+    ov = overrides[group]
+    if "option" in ov:
+        setting.setdefault("option", {}).update(ov["option"])
+    if "properties" in ov:
+        p = setting.setdefault("properties", {})
+        for pk, pv in ov["properties"].items():
+            if pk in p and isinstance(p[pk], dict):
+                p[pk]["value"] = pv
+            else:
+                p[pk] = {"name": pk, "value": pv, "type": "string"}
+    body = json.dumps({
+        "name":         setting.get("name"),
+        "group":        setting.get("group"),
+        "properties":   setting.get("properties", {}),
+        "dependencies": setting.get("dependencies", []),
+        "option":       setting.get("option", {}),
+    }).encode()
+    req = urllib.request.Request(
+        f"{api}/interpreter/setting/{setting['id']}",
+        data=body, method="PUT",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req) as r:
+            print(f"  {group} interpreter updated (HTTP {r.status})")
+    except Exception as e:
+        print(f"  {group} interpreter update FAILED: {e}")
+PY
                     break
                   fi
                 done
