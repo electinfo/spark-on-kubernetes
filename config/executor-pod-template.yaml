@@ -5,10 +5,11 @@
 apiVersion: v1
 kind: Pod
 spec:
-  securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
+  # No securityContext override: apache/spark image's WORKDIR /opt/spark/work-dir
+  # is owned by uid 185 (spark). Forcing runAsUser:1000 caused
+  # AccessDeniedException when Executor.updateDependencies copied fetched JARs
+  # into work-dir, killing executors with "Unable to create executor due to
+  # ./<jar>". Inherit the image's default user instead.
   volumes:
   - name: spark-checkpoints
     nfs:
