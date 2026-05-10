@@ -90,6 +90,21 @@ spec:
       value: "-Dzeppelin.spark.enableSupportedVersionCheck=false"
     - name: ZEPPELIN_SPARK_ENABLESUPPORTEDVERSIONCHECK
       value: "false"
+    # Pod IP via the Kubernetes downward API. Spark in K8s client mode needs
+    # the driver to advertise an address reachable from executor pods; without
+    # this, Utils.findLocalInetAddress() can pick something that fails to
+    # resolve from the cluster network and executors hang on RPC connect,
+    # eventually triggering "Spark context stopped while waiting for backend".
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    # Spark reads this env var directly and uses it as the local hostname
+    # for advertising. K8s expands $(POD_IP) to the value of POD_IP at
+    # container start. Same pattern as spark-connect-server's --conf
+    # spark.driver.host=$POD_IP.
+    - name: SPARK_LOCAL_HOSTNAME
+      value: "$(POD_IP)"
   {% for key, value in zeppelin.k8s.envs.items() %}
     - name: {{key}}
       value: {{value}}
