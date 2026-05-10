@@ -43,6 +43,15 @@ spec:
     nfs:
       server: 10.10.0.10
       path: /volume1/spark-checkpoints
+  # Shared NFS Ivy cache. Driver Ivy-resolves spark.jars.packages here;
+  # executor pods mount the same NFS path at the same location, so they
+  # find Ivy-resolved JARs without going through the driver's file
+  # server (which doesn't reliably ship JARs in K8s client mode and
+  # caused "Unable to create executor due to ./io.delta_*.jar" errors).
+  - name: spark-ivy-cache
+    nfs:
+      server: 10.10.0.10
+      path: /volume1/spark-ivy-cache
   - name: spark-conf
     configMap:
       name: spark-conf
@@ -62,6 +71,8 @@ spec:
       mountPath: /tmp/spark-local
     - name: spark-checkpoints
       mountPath: /mnt/spark-checkpoints
+    - name: spark-ivy-cache
+      mountPath: /mnt/spark-ivy-cache
     - name: spark-conf
       mountPath: /opt/spark/conf
       readOnly: true
