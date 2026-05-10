@@ -14,8 +14,17 @@ spec:
     nfs:
       server: 10.10.0.10
       path: /volume1/spark-checkpoints
+  # Shared NFS Ivy cache, mounted at the same path on every executor and
+  # the driver (zeppelin interpreter). Lets executors load JARs the
+  # driver Ivy-resolved without going through the driver's file server.
+  - name: spark-ivy-cache
+    nfs:
+      server: 10.10.0.10
+      path: /volume1/spark-ivy-cache
   containers:
   - name: spark-kubernetes-executor
     volumeMounts:
     - name: spark-checkpoints
       mountPath: /mnt/spark-checkpoints
+    - name: spark-ivy-cache
+      mountPath: /mnt/spark-ivy-cache
