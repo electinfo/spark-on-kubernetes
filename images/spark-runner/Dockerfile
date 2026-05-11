@@ -53,15 +53,24 @@ RUN pip install --no-cache-dir pyyaml pandas zstandard nameparser \
 # Splink probabilistic entity resolution + DuckDB backend for dev/testing
 RUN pip install --no-cache-dir "splink[spark]" duckdb
 
-# electinfo-common + pure-translation from Nexus PyPI (cache-busted on each triggered build).
-# pure-translation ships the parsers/conf/forms/**/*.yaml Hydra schemas
-# consumed by pipelines/utilities/fec_hydra_schema.py for the fec_filings
-# medallion (typed bronze derived directly from Monroe's parsed JSONL).
+# electinfo-common from Nexus PyPI (cache-busted on each triggered build).
 ARG PIP_CACHE_EPOCH=0
 RUN pip install --no-cache-dir \
     --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
     --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
-    electinfo-common \
+    electinfo-common
+
+# pure-translation ships parsers/conf/forms/**/*.yaml — the Hydra-derived FEC
+# schemas consumed by pipelines/utilities/fec_hydra_schema.py for the
+# fec_filings medallion. We only need the wheel's package data (the YAMLs),
+# not its runtime imports, so --no-deps sidesteps the siege-utilities>=3.3.0
+# resolution wall in pypi-group that pip can't traverse without netrc auth
+# against pypi-hosted's /simple/ endpoint (same snag the Zeppelin notebook
+# fec validation hit). pydantic / hydra-core / omegaconf are already
+# explicitly installed in the layer above.
+RUN pip install --no-cache-dir --no-deps \
+    --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
+    --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
     pure-translation
 
 USER spark
