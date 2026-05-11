@@ -53,11 +53,15 @@ RUN pip install --no-cache-dir pyyaml pandas zstandard nameparser \
 # Splink probabilistic entity resolution + DuckDB backend for dev/testing
 RUN pip install --no-cache-dir "splink[spark]" duckdb
 
-# electinfo-common from Nexus PyPI (cache-busted on each triggered build)
+# electinfo-common + pure-translation from Nexus PyPI (cache-busted on each triggered build).
+# pure-translation ships the parsers/conf/forms/**/*.yaml Hydra schemas
+# consumed by pipelines/utilities/fec_hydra_schema.py for the fec_filings
+# medallion (typed bronze derived directly from Monroe's parsed JSONL).
 ARG PIP_CACHE_EPOCH=0
 RUN pip install --no-cache-dir \
     --index-url http://nexus-nexus-repository-manager.nexus.svc.cluster.local:8081/repository/pypi-group/simple/ \
     --trusted-host nexus-nexus-repository-manager.nexus.svc.cluster.local \
-    electinfo-common
+    electinfo-common \
+    pure-translation
 
 USER spark
