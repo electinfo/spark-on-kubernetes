@@ -554,7 +554,8 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     }
 
     private Table createExternalTable(Identifier ident, String columnsJson,
-                                      Map<String, String> properties) {
+                                      Map<String, String> properties,
+                                      java.util.List<String> requestedPartCols) {
         String schemaName = ident.namespace()[0];
         String tableName = ident.name();
 
@@ -624,7 +625,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                             schemaName + "." + tableName + " (existing=" + existingFormat +
                             ", requested=" + provider.toUpperCase() + "). Dropping and recreating.");
                         deleteTable(schemaName, tableName);
-                        return createExternalTable(ident, columnsJson, properties);
+                        return createExternalTable(ident, columnsJson, properties, requestedPartCols);
                     }
                     // Schema mismatch: drop and recreate if column count differs.
                     // This handles DLP schema evolution (columns added/removed between
@@ -636,7 +637,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                             schemaName + "." + tableName + " (existing=" + existingCols +
                             " cols, requested=" + requestedCols + " cols). Dropping and recreating.");
                         deleteTable(schemaName, tableName);
-                        return createExternalTable(ident, columnsJson, properties);
+                        return createExternalTable(ident, columnsJson, properties, requestedPartCols);
+                    }
+                    // Partition mismatch: drop and recreate if partition columns differ.
+                    // Handles tables created before partition_index was sent to UC REST API.
+                    java.util.List<String> existingPartCols =
+                        getPartitionColumnsFromUC(schemaName, tableName);
+                    if (!requestedPartCols.equals(existingPartCols)) {
+                        System.out.println("PatchedUCSingleCatalog: Partition mismatch for " +
+                            schemaName + "." + tableName + " (existing=" + existingPartCols +
+                            ", requested=" + requestedPartCols + "). Dropping and recreating.");
+                        deleteTable(schemaName, tableName);
+                        return createExternalTable(ident, columnsJson, properties, requestedPartCols);
                     }
                     // Skip V1 sync — same as fresh create: the V1 write path
                     // will create the V1 entry after writing data.
@@ -692,7 +704,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             System.out.println("PatchedUCSingleCatalog: createTable " + ident +
                 " partition_cols=" + partCols);
         }
-        return createExternalTable(ident, columnsToJson(columns, partCols), props);
+        return createExternalTable(ident, columnsToJson(columns, partCols), props, partCols);
     }
 
     @Override
@@ -712,7 +724,7 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             System.out.println("PatchedUCSingleCatalog: createTable " + ident +
                 " partition_cols=" + partCols);
         }
-        return createExternalTable(ident, structTypeToJson(schema, partCols), props);
+        return createExternalTable(ident, structTypeToJson(schema, partCols), props, partCols);
     }
 
     // --- Staging overrides: UC OSS doesn't support staging tables ---

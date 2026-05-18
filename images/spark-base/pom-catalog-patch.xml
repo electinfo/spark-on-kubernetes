@@ -1,4 +1,4 @@
-<!-- build-epoch: 2026-05-18T12:00 - loadTable partition injection for UC v0.4.0 -->
+<!-- build-epoch: 2026-05-18T13:00 - createTable partition mismatch self-healing -->
 <project>
   <modelVersion>4.0.0</modelVersion>
   <groupId>info.elect</groupId>
