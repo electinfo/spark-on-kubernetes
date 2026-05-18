@@ -6,6 +6,7 @@ import org.apache.spark.sql.connector.catalog.Column;
 import org.apache.spark.sql.connector.catalog.Identifier;
 import org.apache.spark.sql.connector.catalog.Table;
 import org.apache.spark.sql.connector.catalog.TableChange;
+import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.Transform;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -461,6 +462,97 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
         return names;
     }
 
+    // --- Helpers: parse UC REST API column JSON for partition info ---
+
+    /** Extract a top-level string field from a JSON object string. */
+    private static String extractJsonString(String obj, String key) {
+        int idx = obj.indexOf("\"" + key + "\"");
+        if (idx < 0) return null;
+        int colonIdx = obj.indexOf(":", idx + key.length() + 2);
+        if (colonIdx < 0) return null;
+        int start = obj.indexOf("\"", colonIdx + 1) + 1;
+        if (start <= 0) return null;
+        int end = obj.indexOf("\"", start);
+        return (end > start) ? obj.substring(start, end) : null;
+    }
+
+    /** Extract a top-level integer field from a JSON object string. Returns -1 if absent. */
+    private static int extractJsonInt(String obj, String key) {
+        int idx = obj.indexOf("\"" + key + "\"");
+        if (idx < 0) return -1;
+        int colonIdx = obj.indexOf(":", idx + key.length() + 2);
+        if (colonIdx < 0) return -1;
+        int pos = colonIdx + 1;
+        while (pos < obj.length() && Character.isWhitespace(obj.charAt(pos))) pos++;
+        if (pos >= obj.length()) return -1;
+        int end = pos;
+        if (obj.charAt(end) == '-') end++;
+        while (end < obj.length() && Character.isDigit(obj.charAt(end))) end++;
+        try {
+            return Integer.parseInt(obj.substring(pos, end));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Parse UC REST API table JSON and return partition column names sorted by partition_index.
+     * Columns without partition_index (or partition_index < 0) are non-partition columns.
+     */
+    private static java.util.List<String> extractPartitionColumnsFromJson(String body) {
+        java.util.TreeMap<Integer, String> byIndex = new java.util.TreeMap<>();
+        int colsIdx = body.indexOf("\"columns\"");
+        if (colsIdx < 0) return java.util.Collections.emptyList();
+        int arrStart = body.indexOf("[", colsIdx);
+        if (arrStart < 0) return java.util.Collections.emptyList();
+        int depth = 0, objStart = -1;
+        for (int i = arrStart; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c == '{') {
+                if (depth == 0) objStart = i;
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0 && objStart >= 0) {
+                    String colJson = body.substring(objStart, i + 1);
+                    String name = extractJsonString(colJson, "name");
+                    int partIdx = extractJsonInt(colJson, "partition_index");
+                    if (name != null && partIdx >= 0) byIndex.put(partIdx, name);
+                    objStart = -1;
+                }
+            } else if (c == ']' && depth == 0) {
+                break;
+            }
+        }
+        return new java.util.ArrayList<>(byIndex.values());
+    }
+
+    /**
+     * Fetch partition column names for a table from the UC REST API.
+     * Returns empty list if the table has no partitions or cannot be reached.
+     * Used to work around UC Spark connector v0.4.0 not populating
+     * CatalogTable.partitionColumnNames from column partition_index fields.
+     */
+    private java.util.List<String> getPartitionColumnsFromUC(
+            String schemaName, String tableName) {
+        try {
+            String fullName = catalogName + "." + schemaName + "." + tableName;
+            URL url = new URL(ucApiBase + "/tables/" + fullName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            if (conn.getResponseCode() == 200) {
+                String body = new String(
+                    conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                return extractPartitionColumnsFromJson(body);
+            }
+        } catch (Exception e) {
+            // non-fatal — return empty list
+        }
+        return java.util.Collections.emptyList();
+    }
+
     private Table createExternalTable(Identifier ident, String columnsJson,
                                       Map<String, String> properties) {
         String schemaName = ident.namespace()[0];
@@ -749,8 +841,18 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
 
             if (table instanceof V1Table) {
                 V1Table cleaned = stripUCStorageCredentials((V1Table) table);
+                // Inject partition columns for UC connector v0.4.0 compatibility
+                java.util.List<String> injectedPartCols = null;
+                if (cleaned.v1Table().partitionColumnNames().isEmpty()
+                        && ident.namespace().length > 0) {
+                    java.util.List<String> partCols = getPartitionColumnsFromUC(
+                        ident.namespace()[0], ident.name());
+                    if (!partCols.isEmpty()) {
+                        injectedPartCols = partCols;
+                    }
+                }
                 // No V1 syncTable — caller is createExternalTable
-                return new TruncatableV1Table(cleaned, ident);
+                return new TruncatableV1Table(cleaned, ident, injectedPartCols);
             }
             return table;
         }
@@ -802,13 +904,29 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
             // FileSystem (from ensureCleanS3ACache) which has the correct settings.
             if (table instanceof V1Table) {
                 V1Table cleaned = stripUCStorageCredentials((V1Table) table);
+                // UC Spark connector v0.4.0 does not populate CatalogTable.partitionColumnNames
+                // from the partition_index fields in the UC REST API response. This causes
+                // DLP's partition mismatch check to fail (table.partitioning() returns [] while
+                // the pipeline definition expects [cycle, form_type]). Work around by fetching
+                // partition columns directly from UC REST API and injecting into TruncatableV1Table.
+                java.util.List<String> injectedPartCols = null;
+                if (cleaned.v1Table().partitionColumnNames().isEmpty()
+                        && ident.namespace().length > 0) {
+                    java.util.List<String> partCols = getPartitionColumnsFromUC(
+                        ident.namespace()[0], ident.name());
+                    if (!partCols.isEmpty()) {
+                        System.out.println("PatchedUCSingleCatalog: Injecting partition cols "
+                            + partCols + " into loadTable(" + ident + ")");
+                        injectedPartCols = partCols;
+                    }
+                }
                 // Sync table metadata to V1 SessionCatalog so the V1 write path
                 // (triggered by saveAsTable's V1Table fallback) can resolve the
                 // table with the correct S3 LOCATION. Without this, tables from
                 // non-session catalogs (census, tec) are not found when the V1
                 // fallback strips the catalog and resolves against spark_catalog.
                 org.apache.spark.sql.V1CatalogSync.syncTable(cleaned.v1Table());
-                return new TruncatableV1Table(cleaned, ident);
+                return new TruncatableV1Table(cleaned, ident, injectedPartCols);
             }
             if (table instanceof TruncatableTable) {
                 return table;
@@ -871,17 +989,40 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     }
 
     /**
-     * V1Table subclass that adds TruncatableTable support.
-     * Extends V1Table so Spark's V1 scan resolution continues to work
-     * (instanceof V1Table remains true), while DLP can call truncateTable().
+     * V1Table subclass that adds TruncatableTable support and optionally overrides
+     * partitioning() to work around UC Spark connector v0.4.0 not populating
+     * CatalogTable.partitionColumnNames from column partition_index fields.
+     * When injectedPartCols is non-empty, partitioning() returns identity transforms
+     * for those columns instead of delegating to the (empty) CatalogTable field.
      */
     private class TruncatableV1Table extends V1Table implements TruncatableTable {
 
         private final Identifier ident;
+        private final Transform[] overridePartitioning; // null = use super.partitioning()
 
         TruncatableV1Table(V1Table original, Identifier ident) {
+            this(original, ident, null);
+        }
+
+        TruncatableV1Table(V1Table original, Identifier ident,
+                           java.util.List<String> injectedPartCols) {
             super(original.v1Table());
             this.ident = ident;
+            if (injectedPartCols != null && !injectedPartCols.isEmpty()) {
+                this.overridePartitioning = injectedPartCols.stream()
+                    .map(Expressions::identity)
+                    .toArray(Transform[]::new);
+            } else {
+                this.overridePartitioning = null;
+            }
+        }
+
+        @Override
+        public Transform[] partitioning() {
+            if (overridePartitioning != null) {
+                return overridePartitioning;
+            }
+            return super.partitioning();
         }
 
         @Override

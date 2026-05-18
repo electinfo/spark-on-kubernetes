@@ -1,4 +1,4 @@
-<!-- build-epoch: 2026-05-18T03:42 - force recompile after partition_cols fix -->
+<!-- build-epoch: 2026-05-18T12:00 - loadTable partition injection for UC v0.4.0 -->
 <project>
   <modelVersion>4.0.0</modelVersion>
   <groupId>info.elect</groupId>
