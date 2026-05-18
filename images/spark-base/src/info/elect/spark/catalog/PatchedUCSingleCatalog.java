@@ -384,40 +384,81 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
     }
 
     private String columnsToJson(Column[] columns) {
+        return columnsToJson(columns, java.util.Collections.emptyList());
+    }
+
+    private String columnsToJson(Column[] columns, java.util.List<String> partitionCols) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < columns.length; i++) {
             if (i > 0) sb.append(",");
             String sqlType = columns[i].dataType().sql();
+            int partIdx = partitionCols.indexOf(columns[i].name());
             sb.append("{")
               .append("\"name\":\"").append(escapeJson(columns[i].name())).append("\",")
               .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
               .append("\"type_json\":\"").append(typeJson(columns[i].name(), sqlType, columns[i].nullable())).append("\",")
               .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
               .append("\"position\":").append(i).append(",")
-              .append("\"nullable\":").append(columns[i].nullable())
-              .append("}");
+              .append("\"nullable\":").append(columns[i].nullable());
+            if (partIdx >= 0) {
+                sb.append(",\"partition_index\":").append(partIdx);
+            }
+            sb.append("}");
         }
         sb.append("]");
         return sb.toString();
     }
 
     private String structTypeToJson(StructType schema) {
+        return structTypeToJson(schema, java.util.Collections.emptyList());
+    }
+
+    private String structTypeToJson(StructType schema, java.util.List<String> partitionCols) {
         StructField[] fields = schema.fields();
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < fields.length; i++) {
             if (i > 0) sb.append(",");
             String sqlType = fields[i].dataType().sql();
+            int partIdx = partitionCols.indexOf(fields[i].name());
             sb.append("{")
               .append("\"name\":\"").append(escapeJson(fields[i].name())).append("\",")
               .append("\"type_text\":\"").append(escapeJson(sqlType)).append("\",")
               .append("\"type_json\":\"").append(typeJson(fields[i].name(), sqlType, fields[i].nullable())).append("\",")
               .append("\"type_name\":\"").append(ucTypeName(sqlType)).append("\",")
               .append("\"position\":").append(i).append(",")
-              .append("\"nullable\":").append(fields[i].nullable())
-              .append("}");
+              .append("\"nullable\":").append(fields[i].nullable());
+            if (partIdx >= 0) {
+                sb.append(",\"partition_index\":").append(partIdx);
+            }
+            sb.append("}");
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    /**
+     * Extract partition column names from DLP's Transform[] array.
+     * DLP passes partition_cols as Identity transforms, each wrapping one column name.
+     * Returns column names in the order they appear in the partitions array.
+     */
+    private static java.util.List<String> extractPartitionColNames(Transform[] partitions) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        if (partitions != null) {
+            for (Transform t : partitions) {
+                try {
+                    org.apache.spark.sql.connector.expressions.NamedReference[] refs = t.references();
+                    if (refs != null && refs.length > 0) {
+                        String[] fieldNames = refs[0].fieldNames();
+                        if (fieldNames != null && fieldNames.length > 0) {
+                            names.add(fieldNames[0]);
+                        }
+                    }
+                } catch (Exception e) {
+                    // ignore malformed transforms
+                }
+            }
+        }
+        return names;
     }
 
     private Table createExternalTable(Identifier ident, String columnsJson,
@@ -554,7 +595,12 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                 " overriding provider " + requested + " -> " + defaultFmt);
         }
         props.put(PROVIDER_KEY, defaultFmt);
-        return createExternalTable(ident, columnsToJson(columns), props);
+        java.util.List<String> partCols = extractPartitionColNames(partitions);
+        if (!partCols.isEmpty()) {
+            System.out.println("PatchedUCSingleCatalog: createTable " + ident +
+                " partition_cols=" + partCols);
+        }
+        return createExternalTable(ident, columnsToJson(columns, partCols), props);
     }
 
     @Override
@@ -569,7 +615,12 @@ public class PatchedUCSingleCatalog extends UCSingleCatalog {
                 " overriding provider " + requested + " -> " + defaultFmt);
         }
         props.put(PROVIDER_KEY, defaultFmt);
-        return createExternalTable(ident, structTypeToJson(schema), props);
+        java.util.List<String> partCols = extractPartitionColNames(partitions);
+        if (!partCols.isEmpty()) {
+            System.out.println("PatchedUCSingleCatalog: createTable " + ident +
+                " partition_cols=" + partCols);
+        }
+        return createExternalTable(ident, structTypeToJson(schema, partCols), props);
     }
 
     // --- Staging overrides: UC OSS doesn't support staging tables ---
