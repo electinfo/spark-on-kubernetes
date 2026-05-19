@@ -75,6 +75,10 @@ RUN python3.11 -m pip install --no-cache-dir \
 RUN python3.11 -m pip install --no-cache-dir \
     "pyspark[connect]>=3.5.0"
 
+# Layer 6: electinfo-common (PC-16 identity namespaces, imported by translator_spark.py)
+RUN python3.11 -m pip install --no-cache-dir \
+    "electinfo-common>=0.3.0"
+
 # Install kubectl (required for SparkOperator job submission via kubectl apply)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-transport-https ca-certificates curl gnupg \
