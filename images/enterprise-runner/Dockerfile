@@ -75,8 +75,12 @@ RUN python3.11 -m pip install --no-cache-dir \
 RUN python3.11 -m pip install --no-cache-dir \
     "pyspark[connect]>=3.5.0"
 
-# Layer 6: electinfo-common (PC-16 identity namespaces, imported by translator_spark.py)
+# Layer 6: electinfo-common (PC-16 identity namespaces, imported by translator_spark.py).
+# Private package on Nexus PyPI (repo.elect.info), not on public PyPI — needs
+# --extra-index-url. siege-utilities (Layer 1) is on public PyPI so it doesn't need it.
+# See ops#160 for the publish pipeline.
 RUN python3.11 -m pip install --no-cache-dir \
+    --extra-index-url https://repo.elect.info/repository/pypi-hosted/simple \
     "electinfo-common>=0.3.0"
 
 # Install kubectl (required for SparkOperator job submission via kubectl apply)
