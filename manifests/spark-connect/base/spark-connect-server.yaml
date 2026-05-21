@@ -57,6 +57,10 @@ spec:
                 --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
                 --conf spark.sql.catalog.spark_catalog.token= \
                 --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo \
+                --conf spark.sql.catalog.fec_filings_enterprise_experimental=info.elect.spark.catalog.PatchedUCSingleCatalog \
+                --conf spark.sql.catalog.fec_filings_enterprise_experimental.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
+                --conf spark.sql.catalog.fec_filings_enterprise_experimental.token= \
+                --conf spark.sql.catalog.fec_filings_enterprise_experimental.uc-catalog=fec_filings_enterprise_experimental \
                 --conf spark.driver.maxResultSize=4g \
                 --conf spark.executor.extraClassPath=/opt/spark/custom-jars/*:/opt/spark/work-dir/*
           env:
