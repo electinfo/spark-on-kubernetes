@@ -1,0 +1,210 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fec-pipeline-readiness-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  fec-pipeline-readiness.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "EE pipeline readiness: table inventory, row counts, sentinels, schema drift, ESQ Gold freshness",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "refresh": "30m",
+      "schemaVersion": 38,
+      "tags": ["fec", "enterprise", "pipeline"],
+      "time": { "from": "now-7d", "to": "now" },
+      "timepicker": {},
+      "timezone": "America/Chicago",
+      "title": "FEC EE Pipeline Readiness",
+      "uid": "fec-pipeline-readiness",
+      "version": 1,
+      "panels": [
+        {
+          "id": 1,
+          "type": "table",
+          "title": "Table Inventory — cycle × schema (latest snapshot)",
+          "description": "Count of UC tables in fec_filings_enterprise_experimental by schema and cycle",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "options": {
+            "footer": { "show": false },
+            "showHeader": true,
+            "sortBy": [{ "displayName": "schema_name" }]
+          },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "table_count" },
+                "properties": [
+                  { "id": "custom.displayMode", "value": "color-background" },
+                  { "id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "red", "value": null },
+                      { "color": "yellow", "value": 1 },
+                      { "color": "green", "value": 10 }
+                    ]
+                  }}
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT schema_name, COALESCE(cycle::text, 'N/A') AS cycle, COUNT(*) AS table_count FROM monitoring.fec_ee_table_inventory WHERE collected_at = (SELECT MAX(collected_at) FROM monitoring.fec_ee_table_inventory) GROUP BY schema_name, cycle ORDER BY schema_name, cycle",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Row Counts per (cycle, schema) — over time",
+          "description": "Total rows in EE tables grouped by schema and cycle, one point per scraper run",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 8 },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+            "tooltip": { "mode": "multi" }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "lineWidth": 2, "fillOpacity": 10 },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT collected_at AS \"time\", schema_name || CASE WHEN cycle IS NOT NULL THEN ' / ' || cycle::text ELSE '' END AS metric, SUM(row_count) AS value FROM monitoring.fec_ee_row_counts WHERE $__timeFilter(collected_at) GROUP BY 1, 2 ORDER BY 1",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "table",
+          "title": "Bronze Sentinel Inventory — monthly .done files per cycle",
+          "description": "s3://fec-filings/partitioned/cycle=N/_months/YYYY-MM.done present in latest scrape",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 17 },
+          "options": { "footer": { "show": false }, "showHeader": true },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "sentinel_count" },
+                "properties": [
+                  { "id": "custom.displayMode", "value": "color-background" },
+                  { "id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "red", "value": null },
+                      { "color": "yellow", "value": 1 },
+                      { "color": "green", "value": 6 }
+                    ]
+                  }}
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT cycle, COUNT(*) AS sentinel_count, MIN(month) AS earliest_month, MAX(month) AS latest_month FROM monitoring.fec_ee_sentinels WHERE collected_at = (SELECT MAX(collected_at) FROM monitoring.fec_ee_sentinels) GROUP BY cycle ORDER BY cycle DESC",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "table",
+          "title": "Schema Drift — families in parquet NOT in hydra registry",
+          "description": "form_family values found in s3://fec-filings/partitioned/ that have no YAML in the parsers wheel",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 17 },
+          "options": { "footer": { "show": false }, "showHeader": true },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "has_parquet" },
+                "properties": [{ "id": "custom.displayMode", "value": "color-text" }]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT form_family, cycle, has_parquet, in_hydra_registry FROM monitoring.fec_ee_schema_drift WHERE collected_at = (SELECT MAX(collected_at) FROM monitoring.fec_ee_schema_drift) AND NOT in_hydra_registry ORDER BY cycle DESC, form_family",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "ESQ Gold Delta Freshness — age (hours) of last commit",
+          "description": "Hours since last _delta_log commit in s3://hive-warehouse/enterprise_bulk_v2/{table}/",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true },
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "h",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 24 },
+                  { "color": "red", "value": 72 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "datasource": { "type": "grafana-postgresql-datasource", "uid": "efmrsj6vb5ekgc" },
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT table_name, age_hours FROM monitoring.fec_ee_esq_freshness WHERE collected_at = (SELECT MAX(collected_at) FROM monitoring.fec_ee_esq_freshness) ORDER BY table_name",
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": { "age_hours": "Age (h)", "table_name": "Table" }
+              }
+            }
+          ]
+        }
+      ]
+    }
