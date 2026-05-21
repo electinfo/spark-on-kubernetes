@@ -28,7 +28,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: scraper
-              image: registry.container-registry.svc.cluster.local:5000/electinfo/enterprise-runner:latest
+              image: localhost:32000/electinfo/enterprise-runner:latest
               imagePullPolicy: Always
               command:
                 - python3.11
