@@ -1,0 +1,75 @@
+---
+# Secret required (apply manually — do not commit actual values):
+#
+#   kubectl create secret generic fec-pipeline-monitor-secret \
+#     --namespace enterprise \
+#     --from-literal=uc-token='<UC_TOKEN from vault electinfo/app-unity-catalog>' \
+#     --from-literal=s3-access-key='electinfo' \
+#     --from-literal=s3-secret-key='electinfo123' \
+#     --from-literal=db-dsn='postgresql://postgres:electinfo@10.10.0.101:31543/electinfo'
+#
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fec-pipeline-monitor
+  namespace: enterprise
+  labels:
+    app: fec-pipeline-monitor
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: scraper
+              image: registry.container-registry.svc.cluster.local:5000/electinfo/enterprise-runner:latest
+              imagePullPolicy: Always
+              command:
+                - python3.11
+                - /scripts/scraper.py
+              env:
+                - name: UC_URL
+                  value: "http://app-unity-catalog.electinfo.svc.cluster.local:8080"
+                - name: S3_ENDPOINT
+                  value: "http://10.10.0.10:9000"
+                - name: UC_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: fec-pipeline-monitor-secret
+                      key: uc-token
+                - name: S3_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: fec-pipeline-monitor-secret
+                      key: s3-access-key
+                - name: S3_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: fec-pipeline-monitor-secret
+                      key: s3-secret-key
+                - name: DB_DSN
+                  valueFrom:
+                    secretKeyRef:
+                      name: fec-pipeline-monitor-secret
+                      key: db-dsn
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+          volumes:
+            - name: scripts
+              configMap:
+                name: fec-pipeline-monitor-script
+                defaultMode: 0755
