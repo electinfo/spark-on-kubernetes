@@ -22,6 +22,8 @@ metadata:
     app: spark-connect-server
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: spark-connect-server
@@ -541,7 +543,9 @@ data:
     # all SB subschedule records collapse into one MV per cycle, peak heap during
     # partitioned-write commit hit ~27g/32g at the old config. Driver bumped
     # symmetrically. See electinfo/enterprise#2090 + tonight's silver 832123 hang.
-    spark.executor.instances                             5
+    # Instances reduced 5→4: magnum excluded from executor scheduling (nodeAffinity
+    # in pod template) to keep spark-runner schedulable on that node.
+    spark.executor.instances                             4
     spark.executor.cores                                 4
     spark.executor.memory                                48g
     spark.executor.memoryOverhead                        16g
@@ -554,7 +558,7 @@ data:
     # Dynamic allocation
     spark.dynamicAllocation.enabled                      true
     spark.dynamicAllocation.minExecutors                 0
-    spark.dynamicAllocation.maxExecutors                 5
+    spark.dynamicAllocation.maxExecutors                 4
     spark.dynamicAllocation.executorIdleTimeout          120s
     spark.dynamicAllocation.shuffleTracking.enabled      true
 
@@ -655,6 +659,14 @@ data:
             server: 10.10.0.10
             path: /volume1/spark-checkpoints
       affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - magnum
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
