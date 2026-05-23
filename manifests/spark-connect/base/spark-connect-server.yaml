@@ -538,17 +538,13 @@ data:
     spark.kubernetes.file.upload.path                    /tmp/spark-uploads
 
     # Executor settings.
-    # Memory raised 24g→48g + memoryOverhead 16g (K8s limit ~64g) to handle EE
-    # silver_exp.sb materialization under Tier 2 (#2083) + bronze pre-union (#2090):
-    # all SB subschedule records collapse into one MV per cycle, peak heap during
-    # partitioned-write commit hit ~27g/32g at the old config. Driver bumped
-    # symmetrically. See electinfo/enterprise#2090 + tonight's silver 832123 hang.
-    # Instances reduced 5→4: magnum excluded from executor scheduling (nodeAffinity
-    # in pod template) to keep spark-runner schedulable on that node.
+    # Hard cap: 30Gi per executor (24g heap + 6g overhead). 64Gi executors
+    # starved neo4j-cluster pods off aegis-red/green on 2026-05-23.
+    # No executor may exceed 30Gi total — see skill spark-executor-memory-cap.
     spark.executor.instances                             4
     spark.executor.cores                                 4
-    spark.executor.memory                                48g
-    spark.executor.memoryOverhead                        16g
+    spark.executor.memory                                24g
+    spark.executor.memoryOverhead                        6g
     spark.driver.memory                                  16g
     spark.driver.memoryOverhead                          4g
     # Include custom JARs and distributed JARs on executor classpath.
