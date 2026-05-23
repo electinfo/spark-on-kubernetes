@@ -145,7 +145,7 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
 
         try {
             SparkSession spark = SparkSession.active();
-            io.delta.tables.DeltaTable.Builder builder = io.delta.tables.DeltaTable
+            io.delta.tables.DeltaTableBuilder builder = io.delta.tables.DeltaTable
                 .createIfNotExists(spark)
                 .location(location)
                 .addColumns(schema);
