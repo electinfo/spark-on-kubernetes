@@ -57,7 +57,7 @@ spec:
                 --conf spark.sql.catalog.spark_catalog.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
                 --conf spark.sql.catalog.spark_catalog.token= \
                 --conf spark.sql.catalog.spark_catalog.uc-catalog=electinfo \
-                --conf spark.sql.catalog.fec_filings_enterprise_experimental=info.elect.spark.catalog.PatchedUCSingleCatalog \
+                --conf spark.sql.catalog.fec_filings_enterprise_experimental=info.elect.spark.catalog.PatchedUCSingleCatalogDelta \
                 --conf spark.sql.catalog.fec_filings_enterprise_experimental.uri=http://app-unity-catalog.electinfo.svc.cluster.local:8080 \
                 --conf spark.sql.catalog.fec_filings_enterprise_experimental.token= \
                 --conf spark.sql.catalog.fec_filings_enterprise_experimental.uc-catalog=fec_filings_enterprise_experimental \
@@ -140,8 +140,16 @@ data:
     spark.jars.packages                                  org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.29.6,org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3,org.postgresql:postgresql:42.7.1,io.graphframes:graphframes-spark4_2.13:0.10.0,io.unitycatalog:unitycatalog-spark_2.13:0.4.0-spark410,io.delta:delta-spark_4.1_2.13:4.1.0-spark410,org.opensearch.client:opensearch-spark-40_2.13:1.3.0-spark411,org.apache.sedona:sedona-spark-shaded-4.0_2.13:1.8.1,org.datasyslab:geotools-wrapper:1.7.1-28.5,commons-collections:commons-collections:3.2.2
     spark.jars.repositories                               https://repo.elect.info/repository/maven-public/,https://artifacts.unidata.ucar.edu/repository/unidata-all
     spark.jars.ivy                                       /nonexistent/.ivy2.5.2
-    # Sedona: spatial SQL extensions + Kryo serializer (required by Sedona)
-    spark.sql.extensions                                 org.apache.sedona.sql.SedonaSqlExtensions
+    # SQL extensions: Sedona (spatial) + Delta (CONVERT TO DELTA, VACUUM,
+    # OPTIMIZE, MERGE, etc.). Delta SQL extension is required by the
+    # fec_filings_enterprise_experimental catalog (now bound to
+    # PatchedUCSingleCatalogDelta) so DLT-driven writes register tables as
+    # Delta format. Adding the extension cluster-wide is benign for other
+    # catalogs (only adds Delta-specific SQL parsing; default behaviour
+    # unchanged). electinfo/enterprise#2094 surfaced this gap during the
+    # Airflow-driven EE smoke when silver_exp.sb writes went to parquet
+    # despite the spec declaring Delta.
+    spark.sql.extensions                                 org.apache.sedona.sql.SedonaSqlExtensions,io.delta.sql.DeltaSparkSessionExtension
     spark.serializer                                     org.apache.spark.serializer.KryoSerializer
     # Patched UC catalog JAR (also loaded via --driver-class-path for early classloader access)
     spark.jars                                           /opt/spark/custom-jars/spark-catalog-patch.jar
