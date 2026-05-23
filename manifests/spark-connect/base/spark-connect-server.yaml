@@ -525,11 +525,18 @@ data:
     spark.kubernetes.executor.podTemplateFile            /opt/spark/conf/executor-pod-template.yaml
     spark.kubernetes.file.upload.path                    /tmp/spark-uploads
 
-    # Executor settings
+    # Executor settings.
+    # Memory raised 24g→48g + memoryOverhead 16g (K8s limit ~64g) to handle EE
+    # silver_exp.sb materialization under Tier 2 (#2083) + bronze pre-union (#2090):
+    # all SB subschedule records collapse into one MV per cycle, peak heap during
+    # partitioned-write commit hit ~27g/32g at the old config. Driver bumped
+    # symmetrically. See electinfo/enterprise#2090 + tonight's silver 832123 hang.
     spark.executor.instances                             5
     spark.executor.cores                                 4
-    spark.executor.memory                                24g
-    spark.driver.memory                                  8g
+    spark.executor.memory                                48g
+    spark.executor.memoryOverhead                        16g
+    spark.driver.memory                                  16g
+    spark.driver.memoryOverhead                          4g
     # Include custom JARs and distributed JARs on executor classpath.
     # Driver classpath is set via --driver-class-path in the startup command.
     spark.executor.extraClassPath                        /opt/spark/custom-jars/*:/opt/spark/work-dir/*
