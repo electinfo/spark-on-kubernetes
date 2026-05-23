@@ -85,11 +85,13 @@ spec:
               protocol: TCP
           resources:
             requests:
-              memory: "8Gi"
+              memory: "12Gi"
               cpu: "4"
               ephemeral-storage: "1Gi"
             limits:
-              memory: "16Gi"
+              # 24Gi must cover driver.memory (16g) + driver.memoryOverhead (4g) =
+              # 20g JVM + Spark off-heap, plus headroom. See spark-defaults block.
+              memory: "24Gi"
               cpu: "8"
               ephemeral-storage: "2Gi"
           volumeMounts:
