@@ -148,20 +148,13 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
      * the real Snapshot's partitionColumns instead of DummySnapshot's empty list.
      */
     private void bootstrapDeltaLog(Table created, StructType schema, Transform[] partitions) {
-        if (!(created instanceof V1Table)) {
+        String location = extractLocation(created);
+        if (location == null) {
             System.err.println("WARN: PatchedUCSingleCatalogDelta.bootstrapDeltaLog: "
-                + "created table is not V1Table (got " + created.getClass().getName()
-                + "); skipping _delta_log init");
+                + "could not extract storage location from " + created.getClass().getName()
+                + "; skipping _delta_log init");
             return;
         }
-        V1Table v1 = (V1Table) created;
-        CatalogTable ct = v1.v1Table();
-        if (ct.storage().locationUri().isEmpty()) {
-            System.err.println("WARN: PatchedUCSingleCatalogDelta.bootstrapDeltaLog: "
-                + "CatalogTable has no locationUri; skipping _delta_log init");
-            return;
-        }
-        String location = ct.storage().locationUri().get().toString();
         List<String> partCols = extractPartitionColNames(partitions);
 
         try {
@@ -176,6 +169,17 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
             builder.execute();
             System.out.println("PatchedUCSingleCatalogDelta: bootstrapped _delta_log at "
                 + location + " (partitionColumns=" + partCols + ")");
+            // Invalidate any cached DeltaLog snapshot for this path. Without this,
+            // a DeltaTableV2 instance returned earlier from super.createTable would
+            // continue to expose its cached DummySnapshot (empty partitionColumns)
+            // when Spark's saveAsTable checks .partitioning(). Calling
+            // DeltaLog.forTable(...).update() forces a fresh read from the
+            // _delta_log we just wrote.
+            try {
+                io.delta.tables.DeltaTable.forPath(spark, location).toDF();
+            } catch (Exception ignored) {
+                // best-effort cache refresh; if forPath fails, the next read will re-init
+            }
         } catch (Exception e) {
             // Non-fatal: the subsequent saveAsTable will fail with a clearer error
             // if the bootstrap was actually required and didn't run. Logging here
@@ -184,6 +188,40 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
                 + "failed to init _delta_log at " + location
                 + " (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
         }
+    }
+
+    /**
+     * Extract storage location from a Table returned by super.createTable.
+     *
+     * Two cases:
+     * - V1Table (default): location is in CatalogTable.storage.locationUri.
+     * - DeltaTableV2 (Delta extension intercepts when sources.default=delta): expose
+     *   the storage path via a public `path()` method. Use reflection to avoid a
+     *   compile-time dependency on org.apache.spark.sql.delta.catalog.DeltaTableV2
+     *   (which is in delta-spark, present at runtime but pulled via a separate
+     *   classpath in the pom).
+     */
+    private String extractLocation(Table created) {
+        if (created instanceof V1Table) {
+            V1Table v1 = (V1Table) created;
+            if (!v1.v1Table().storage().locationUri().isEmpty()) {
+                return v1.v1Table().storage().locationUri().get().toString();
+            }
+        }
+        try {
+            java.lang.reflect.Method pathMethod = created.getClass().getMethod("path");
+            Object pathObj = pathMethod.invoke(created);
+            if (pathObj != null) {
+                return pathObj.toString();
+            }
+        } catch (NoSuchMethodException nsme) {
+            // not a Delta table; ignore
+        } catch (Exception e) {
+            System.err.println("WARN: PatchedUCSingleCatalogDelta.extractLocation: "
+                + "reflection on " + created.getClass().getName() + ".path() failed: "
+                + e.getMessage());
+        }
+        return null;
     }
 
     /**
