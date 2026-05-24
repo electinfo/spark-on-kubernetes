@@ -4,6 +4,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
 import org.apache.spark.sql.connector.catalog.Column;
 import org.apache.spark.sql.connector.catalog.Identifier;
+import org.apache.spark.sql.connector.catalog.StagedTable;
 import org.apache.spark.sql.connector.catalog.Table;
 import org.apache.spark.sql.connector.catalog.V1Table;
 import org.apache.spark.sql.connector.expressions.NamedReference;
@@ -12,9 +13,14 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -262,5 +268,158 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
             }
         }
         return names;
+    }
+
+    // --- Staging overrides (Delta-aware) ---
+    //
+    // PatchedUCSingleCatalog.stageCreate / stageReplace / stageCreateOrReplace all
+    // funnel into wrapAsStagedTable, which throws UnsupportedOperationException for
+    // anything that isn't a V1Table. When this subclass's createTable returns a
+    // DeltaTableV2 (the Delta SQL extension intercepts UCSingleCatalog.loadTable
+    // when sources.default=delta), the parent's wrapAsStagedTable rejects it and
+    // V2 CTAS paths like df.write.format("delta").saveAsTable(...) fail with:
+    //     Cannot stage non-V1 table: org.apache.spark.sql.delta.catalog.DeltaTableV2
+    //
+    // Override all six staging entry points so they call this subclass's
+    // createTable (which bootstraps _delta_log) and wrap the returned Table in a
+    // Delta-aware StagedTable. The wrapper uses Java dynamic proxy so it picks up
+    // every interface the wrapped table implements (SupportsWrite, SupportsRead,
+    // and Delta-specific extension interfaces) without a compile-time dep on
+    // DeltaTableV2. Spark's V2 write code dispatches via these interfaces, so
+    // instanceof checks still succeed. See electinfo/spark-on-kubernetes#19.
+
+    @Override
+    public StagedTable stageCreate(Identifier ident, Column[] columns,
+            Transform[] partitions, Map<String, String> properties) {
+        Table table = createTable(ident, columns, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public StagedTable stageCreate(Identifier ident, StructType schema,
+            Transform[] partitions, Map<String, String> properties) {
+        Table table = createTable(ident, schema, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    @Override
+    public StagedTable stageReplace(Identifier ident, Column[] columns,
+            Transform[] partitions, Map<String, String> properties) {
+        try { dropTable(ident); } catch (Exception ignored) { }
+        Table table = createTable(ident, columns, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public StagedTable stageReplace(Identifier ident, StructType schema,
+            Transform[] partitions, Map<String, String> properties) {
+        try { dropTable(ident); } catch (Exception ignored) { }
+        Table table = createTable(ident, schema, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    @Override
+    public StagedTable stageCreateOrReplace(Identifier ident, Column[] columns,
+            Transform[] partitions, Map<String, String> properties) {
+        try { dropTable(ident); } catch (Exception ignored) { }
+        Table table = createTable(ident, columns, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public StagedTable stageCreateOrReplace(Identifier ident, StructType schema,
+            Transform[] partitions, Map<String, String> properties) {
+        try { dropTable(ident); } catch (Exception ignored) { }
+        Table table = createTable(ident, schema, partitions, properties);
+        return wrapAsDeltaAwareStagedTable(table, ident);
+    }
+
+    /**
+     * Build a StagedTable proxy that delegates Table-interface methods to the
+     * wrapped table (DeltaTableV2 or anything else returned by createTable) and
+     * implements commitStagedChanges as a no-op + abortStagedChanges as a UC
+     * drop.
+     *
+     * Uses a dynamic proxy over the union of {StagedTable} and every interface
+     * the wrapped table implements (walked transitively up the class hierarchy).
+     * This means SupportsWrite, SupportsRead, and any Delta-specific interfaces
+     * remain visible to Spark's V2 write code without a compile-time dep on
+     * DeltaTableV2. The proxy is NOT an instance of the wrapped table's concrete
+     * class; that's acceptable because Spark's StagingTableCatalog contract only
+     * promises a StagedTable, and Spark's V2 write path dispatches via interface
+     * methods rather than concrete-class casts.
+     */
+    private StagedTable wrapAsDeltaAwareStagedTable(Table table, Identifier ident) {
+        Set<Class<?>> interfaces = new LinkedHashSet<>();
+        collectInterfaces(table.getClass(), interfaces);
+        interfaces.add(StagedTable.class);
+        Class<?>[] proxyInterfaces = interfaces.toArray(new Class<?>[0]);
+
+        InvocationHandler handler = new StagedTableInvocationHandler(table, ident);
+        ClassLoader loader = table.getClass().getClassLoader();
+        return (StagedTable) Proxy.newProxyInstance(loader, proxyInterfaces, handler);
+    }
+
+    /**
+     * Walk the class + superclass + interface chain of cls and add every
+     * interface encountered to out. Required because table.getClass().getInterfaces()
+     * only returns DIRECT interfaces; Delta's DeltaTableV2 extends V2TableWithV1Fallback
+     * which implements many interfaces transitively.
+     */
+    private static void collectInterfaces(Class<?> cls, Set<Class<?>> out) {
+        while (cls != null) {
+            for (Class<?> iface : cls.getInterfaces()) {
+                if (out.add(iface)) {
+                    collectInterfaces(iface, out);
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+    }
+
+    /**
+     * Inner handler so the InvocationHandler isn't a closure-style lambda; gives
+     * abortStagedChanges access to the catalog via the enclosing instance for
+     * dropTable, and a clean stack trace if anything in the proxy chain throws.
+     */
+    private class StagedTableInvocationHandler implements InvocationHandler {
+        private final Table wrapped;
+        private final Identifier ident;
+
+        StagedTableInvocationHandler(Table wrapped, Identifier ident) {
+            this.wrapped = wrapped;
+            this.ident = ident;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            String name = method.getName();
+            if ("commitStagedChanges".equals(name)) {
+                // Data is already written to S3 (PatchedUCSingleCatalog uses the
+                // eager-create-then-write idiom) and UC metadata is in place from
+                // createTable. No-op matches the SimpleStagedTable semantics for
+                // V1Table.
+                return null;
+            }
+            if ("abortStagedChanges".equals(name)) {
+                // On failure, drop the UC entry we just created. dropTable is the
+                // public CatalogPlugin method; package-private deleteTable in the
+                // parent is inaccessible from this subclass.
+                try {
+                    PatchedUCSingleCatalogDelta.this.dropTable(ident);
+                } catch (Exception ignored) {
+                    // best-effort cleanup
+                }
+                return null;
+            }
+            try {
+                return method.invoke(wrapped, args);
+            } catch (java.lang.reflect.InvocationTargetException ite) {
+                throw ite.getCause();
+            }
+        }
     }
 }
