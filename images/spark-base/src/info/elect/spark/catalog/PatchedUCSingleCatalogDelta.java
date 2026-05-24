@@ -58,36 +58,57 @@ public class PatchedUCSingleCatalogDelta extends PatchedUCSingleCatalog {
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, Column[] columns, Transform[] partitions,
                              Map<String, String> properties) {
-        if (isDeltaRequested(properties)) {
-            System.out.println("PatchedUCSingleCatalogDelta: createTable " + ident
-                + " honoring provider delta");
-            return withDeltaDefault(() -> {
-                Table created = super.createTable(ident, columns, partitions, properties);
-                bootstrapDeltaLog(created, columnsToStructType(columns), partitions);
-                return created;
-            });
+        boolean explicitDelta = isDeltaRequested(properties);
+        boolean effectiveDelta = explicitDelta || isSessionDeltaDefault();
+        System.out.println("PatchedUCSingleCatalogDelta: createTable " + ident
+            + " explicitDelta=" + explicitDelta + " effectiveDelta=" + effectiveDelta);
+        Table created;
+        if (explicitDelta) {
+            created = withDeltaDefault(() -> super.createTable(ident, columns, partitions, properties));
+        } else {
+            created = super.createTable(ident, columns, partitions, properties);
         }
-        return super.createTable(ident, columns, partitions, properties);
+        if (effectiveDelta) {
+            bootstrapDeltaLog(created, columnsToStructType(columns), partitions);
+        }
+        return created;
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public Table createTable(Identifier ident, StructType schema, Transform[] partitions,
                              Map<String, String> properties) {
-        if (isDeltaRequested(properties)) {
-            System.out.println("PatchedUCSingleCatalogDelta: createTable " + ident
-                + " honoring provider delta");
-            return withDeltaDefault(() -> {
-                Table created = super.createTable(ident, schema, partitions, properties);
-                bootstrapDeltaLog(created, schema, partitions);
-                return created;
-            });
+        boolean explicitDelta = isDeltaRequested(properties);
+        boolean effectiveDelta = explicitDelta || isSessionDeltaDefault();
+        System.out.println("PatchedUCSingleCatalogDelta: createTable " + ident
+            + " explicitDelta=" + explicitDelta + " effectiveDelta=" + effectiveDelta);
+        Table created;
+        if (explicitDelta) {
+            created = withDeltaDefault(() -> super.createTable(ident, schema, partitions, properties));
+        } else {
+            created = super.createTable(ident, schema, partitions, properties);
         }
-        return super.createTable(ident, schema, partitions, properties);
+        if (effectiveDelta) {
+            bootstrapDeltaLog(created, schema, partitions);
+        }
+        return created;
     }
 
     private boolean isDeltaRequested(Map<String, String> properties) {
         return properties != null && DELTA.equalsIgnoreCase(properties.get(PROVIDER_KEY));
+    }
+
+    /**
+     * Returns true if spark.sql.sources.default is "delta" in the active session.
+     * DLT does not pass provider=delta in createTable properties; it relies on
+     * sources.default (set in the pipeline yaml). We must check both surfaces.
+     */
+    private boolean isSessionDeltaDefault() {
+        try {
+            return DELTA.equalsIgnoreCase(SparkSession.active().conf().get(SOURCES_DEFAULT));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
