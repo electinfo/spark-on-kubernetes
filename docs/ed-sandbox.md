@@ -3,9 +3,9 @@
 > Debug Unity Catalog for iterating on catalog-plugin (`PatchedUCSingleCatalog`, `PatchedUCSingleCatalogDelta`) and UC/Delta interaction failure modes at ~30s/iteration instead of running the full EE pipeline smoke arc at ~30 min/cycle.
 
 **Catalog name:** `enterprise_debug` ("ED" in shorthand)
-**Catalog id:** `342a939c-bddc-44d1-a27f-b955c76559a3`
+**Catalog id:** `342a939c-bddc-44d1-a27f-b955c76559a3` (verified via UC REST 2026-05-25)
 **Storage root:** `s3a://hive-warehouse/enterprise_debug/`
-**Created:** 2026-05-24 (during the `spark-on-kubernetes#19` Delta-write postmortem)
+**Created:** 2026-05-23 4:18 PM CDT (UC REST `created_at`: `1779592732616`; created during the `spark-on-kubernetes#19` Delta-write postmortem)
 **Home ticket:** [`electinfo/spark-on-kubernetes#19`](https://github.com/electinfo/spark-on-kubernetes/issues/19)
 **Codification ticket:** [`electinfo/enterprise#2122`](https://github.com/electinfo/enterprise/issues/2122)
 
@@ -45,7 +45,23 @@ These artifacts are the durable surface of the sandbox; future debug sessions re
 - Network access from the worker pod (any `airflow-worker-*` in namespace `airflow`) to:
   - Spark Connect: `sc://spark-connect.spark.svc.cluster.local:15002`
   - UC REST: `http://app-unity-catalog.electinfo.svc.cluster.local:8080`
-- UC catalog `enterprise_debug` already exists (the operator created it 2026-05-24); no setup beyond `kubectl exec` into a worker pod.
+- UC catalog `enterprise_debug` already exists; no setup beyond `kubectl exec` into a worker pod.
+
+### Listing schemas
+
+`SHOW SCHEMAS IN enterprise_debug` does NOT work — the UC Spark plugin throws `UnsupportedOperationException: Multi-layer namespace is not supported in Unity Catalog`. Use UC REST instead:
+
+```bash
+curl -s 'http://app-unity-catalog.electinfo.svc.cluster.local:8080/api/2.1/unity-catalog/schemas?catalog_name=enterprise_debug' \
+  | python3 -c "import sys,json; print([s['name'] for s in json.load(sys.stdin)['schemas']])"
+# Expected: ['bronze', 'gold', 'silver']
+```
+
+Or list tables in a known schema directly:
+
+```sql
+SHOW TABLES IN enterprise_debug.silver
+```
 
 ## Workflow
 

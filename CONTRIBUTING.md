@@ -8,7 +8,7 @@ Read this before opening a PR.
 
 - Branch off `main`.
 - PRs target `main` (no `develop` branch on this repo).
-- Squash on merge by default. Merge-commit is fine for multi-commit PRs that capture meaningful iteration.
+- **Merge-commit on merge by default** (verified 2026-05-25 against the most-recent 8 merges on `main`; all use GitHub's `Merge pull request #N from ...` style). Squash is appropriate when a multi-commit PR represents iterative drafting that doesn't need to be preserved (e.g., review-feedback amendments); use judgement.
 
 ## Catalog plugin changes require ED sandbox validation
 
