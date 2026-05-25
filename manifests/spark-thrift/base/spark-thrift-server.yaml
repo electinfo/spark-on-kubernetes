@@ -498,6 +498,13 @@ data:
     spark.sql.catalog.enterprise_geospatial_census.token
     spark.sql.catalog.enterprise_geospatial_census.renewCredential.enabled false
 
+
+    # fec_api catalog
+    spark.sql.catalog.fec_api                          info.elect.spark.catalog.PatchedUCSingleCatalog
+    spark.sql.catalog.fec_api.uri                      http://app-unity-catalog.electinfo.svc.cluster.local:8080
+    spark.sql.catalog.fec_api.token
+    spark.sql.catalog.fec_api.renewCredential.enabled  false
+
     # S3 scheme mapping
     spark.hadoop.fs.s3.impl                              org.apache.hadoop.fs.s3a.S3AFileSystem
 
