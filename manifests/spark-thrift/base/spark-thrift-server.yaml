@@ -548,6 +548,12 @@ data:
     spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.change.detection.mode            none
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
+    # See spark-connect-server.yaml for rationale. Asustor s3proxy <= 3.0.0
+    # returns 501 NotImplemented on bulk DeleteObjects (gaul/s3proxy#962,
+    # fixed in 3.1.0). Forcing single-object DELETEs avoids hangs in any
+    # partitioned-write commit. Remove after s3proxy upgrade per
+    # electinfo/enterprise#2230.
+    spark.hadoop.fs.s3a.multiobjectdelete.enable         false
 
     # OpenSearch connection settings
     spark.opensearch.nodes                               opensearch-cluster-aegis.opensearch.svc.cluster.local
