@@ -579,6 +579,17 @@ data:
     spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.change.detection.mode            none
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
+    # Disable S3A bulk multi-object DELETE. The Asustor s3proxy <= 3.0.0 returns
+    # HTTP 501 NotImplemented on the DeleteObjects endpoint when AWS SDK v2 sends
+    # the x-amz-checksum-crc32 header (gaul/s3proxy#962, fixed in s3proxy 3.1.0).
+    # Without this flag, Spark's FileOutputCommitter.commitJob hangs in retry-
+    # sleep during partitioned INSERT commits (both mergePaths and cleanupJob
+    # dispatch bulk DELETE via S3AFileSystem.removeKeysS3). Same hang affects
+    # PatchedUCSingleCatalog.createExternalTable's pre-cleanup fs.delete.
+    # With this flag, S3A iterates single-object DELETEs (functional, ~10s each
+    # against s3proxy; slow but bounded). Remove after s3proxy is upgraded
+    # to >= 3.1.0; tracked at electinfo/enterprise#2230.
+    spark.hadoop.fs.s3a.multiobjectdelete.enable         false
 
     # Multipart upload tuning for s3proxy. JClouds-backed multipart loses parts under high
     # concurrency (manifests as InvalidPart on CompleteMultipartUpload). Strategy: fewer/

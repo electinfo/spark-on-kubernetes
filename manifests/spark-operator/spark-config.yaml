@@ -138,6 +138,10 @@ data:
     spark.hadoop.fs.s3a.connection.ssl.enabled=false
     spark.hadoop.fs.s3a.change.detection.mode=none
     spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+    # Disable S3A bulk multi-object DELETE — see spark-connect-server.yaml.
+    # s3proxy <= 3.0.0 returns 501 NotImplemented (gaul/s3proxy#962, fixed in
+    # 3.1.0). Remove after s3proxy upgrade per electinfo/enterprise#2230.
+    spark.hadoop.fs.s3a.multiobjectdelete.enable=false
 
     # Ivy Cache (writable)
     spark.jars.ivySettings=/opt/spark/conf/ivysettings.xml
