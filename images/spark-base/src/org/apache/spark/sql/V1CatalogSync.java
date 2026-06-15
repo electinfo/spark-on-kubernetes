@@ -125,27 +125,29 @@ public class V1CatalogSync {
                     v1Catalog.getTableMetadata(ident);
                 boolean locationChanged = !existing.storage().locationUri()
                     .equals(table.storage().locationUri());
-                if (locationChanged) {
+                // Check for schema changes (columns added/removed/retyped).
+                // V1 InMemoryCatalog caches the schema from the first loadTable()
+                // call. If a pipeline later changes the table's schema, the stale
+                // V1 entry causes "column number doesn't match" errors.
+                boolean schemaChanged = !existing.schema().equals(table.schema());
+                // Check for partition-spec changes. The V1 entry also caches the
+                // partition columns from the first loadTable(); a stale partitioned
+                // entry can persist in the long-lived spark-connect-server JVM (a
+                // DROP SCHEMA on the V2 catalog does not evict the V1 InMemoryCatalog
+                // entry), so a later unpartitioned write fails with
+                // CANNOT_UPDATE_PARTITION_COLUMNS. Replace the V1 entry so it follows
+                // the table's current partition spec (partitioned or not).
+                boolean partitionChanged = !existing.partitionColumnNames()
+                    .equals(table.partitionColumnNames());
+                if (locationChanged || schemaChanged || partitionChanged) {
                     v1Catalog.dropTable(ident, true, true);
                     v1Catalog.createTable(table, true, false);
                     System.out.println("V1CatalogSync: Replaced table '" + ident +
-                        "' in V1 SessionCatalog (location: " +
-                        existing.storage().locationUri() + " -> " +
-                        table.storage().locationUri() + ")");
-                } else {
-                    // Check for schema changes (columns added/removed/retyped).
-                    // V1 InMemoryCatalog caches the schema from the first loadTable()
-                    // call. If a pipeline later changes the table's schema, the stale
-                    // V1 entry causes "column number doesn't match" errors.
-                    boolean schemaChanged = !existing.schema().equals(table.schema());
-                    if (schemaChanged) {
-                        v1Catalog.dropTable(ident, true, true);
-                        v1Catalog.createTable(table, true, false);
-                        System.out.println("V1CatalogSync: Replaced table '" + ident +
-                            "' in V1 SessionCatalog (schema changed: " +
-                            existing.schema().fields().length + " cols -> " +
-                            table.schema().fields().length + " cols)");
-                    }
+                        "' in V1 SessionCatalog (locationChanged=" + locationChanged +
+                        ", schemaChanged=" + schemaChanged +
+                        ", partitionChanged=" + partitionChanged +
+                        "; partitions " + existing.partitionColumnNames() +
+                        " -> " + table.partitionColumnNames() + ")");
                 }
             } else {
                 v1Catalog.createTable(table, true, false);
