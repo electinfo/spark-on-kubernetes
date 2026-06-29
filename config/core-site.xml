@@ -45,6 +45,10 @@
     <value>none</value>
   </property>
   <property>
+    <name>fs.s3a.change.detection.version.required</name>
+    <value>false</value>
+  </property>
+  <property>
     <name>fs.s3a.buffer.dir</name>
     <value>/tmp/spark-local</value>
   </property>
