@@ -541,6 +541,9 @@ data:
     # S3A configuration for MinIO
     spark.hadoop.fs.s3a.endpoint                         http://10.10.0.10:9000
     spark.hadoop.fs.s3a.path.style.access                true
+    # hive-warehouse migrated to the magnum SSD s3proxy; route only that bucket there.
+    spark.hadoop.fs.s3a.bucket.hive-warehouse.endpoint   http://magnum.files.svc.cluster.local:9000
+    spark.hadoop.fs.s3a.bucket.hive-warehouse.path.style.access  true
     spark.hadoop.fs.s3a.impl                             org.apache.hadoop.fs.s3a.S3AFileSystem
     spark.hadoop.fs.s3a.connection.ssl.enabled           false
     spark.hadoop.fs.s3a.access.key                       electinfo

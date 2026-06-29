@@ -10,6 +10,15 @@
     <name>fs.s3a.path.style.access</name>
     <value>true</value>
   </property>
+  <!-- hive-warehouse migrated to the magnum SSD s3proxy; route only that bucket there -->
+  <property>
+    <name>fs.s3a.bucket.hive-warehouse.endpoint</name>
+    <value>http://magnum.files.svc.cluster.local:9000</value>
+  </property>
+  <property>
+    <name>fs.s3a.bucket.hive-warehouse.path.style.access</name>
+    <value>true</value>
+  </property>
   <property>
     <name>fs.s3a.impl</name>
     <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
