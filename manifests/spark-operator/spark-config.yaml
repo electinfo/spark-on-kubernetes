@@ -140,6 +140,7 @@ data:
     spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.connection.ssl.enabled=false
     spark.hadoop.fs.s3a.change.detection.mode=none
+    spark.hadoop.fs.s3a.change.detection.version.required=false
     spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
     # Disable S3A bulk multi-object DELETE — see spark-connect-server.yaml.
     # s3proxy <= 3.0.0 returns 501 NotImplemented (gaul/s3proxy#962, fixed in

@@ -550,6 +550,7 @@ data:
     spark.hadoop.fs.s3a.secret.key                       electinfo123
     spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.change.detection.mode            none
+    spark.hadoop.fs.s3a.change.detection.version.required false
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
     # See spark-connect-server.yaml for rationale. Asustor s3proxy <= 3.0.0
     # returns 501 NotImplemented on bulk DeleteObjects (gaul/s3proxy#962,

@@ -581,6 +581,7 @@ data:
     spark.hadoop.fs.s3a.secret.key                       electinfo123
     spark.hadoop.fs.s3a.aws.credentials.provider         org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3a.change.detection.mode            none
+    spark.hadoop.fs.s3a.change.detection.version.required false
     spark.hadoop.fs.s3a.buffer.dir                       /tmp/spark-local
     # Disable S3A bulk multi-object DELETE. The Asustor s3proxy <= 3.0.0 returns
     # HTTP 501 NotImplemented on the DeleteObjects endpoint when AWS SDK v2 sends
@@ -624,6 +625,7 @@ data:
     spark.hadoop.fs.s3.secret.key                        electinfo123
     spark.hadoop.fs.s3.aws.credentials.provider          org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     spark.hadoop.fs.s3.change.detection.mode             none
+    spark.hadoop.fs.s3.change.detection.version.required  false
     spark.hadoop.fs.s3.buffer.dir                        /tmp/spark-local
     # Mirror multipart tuning for s3:// (UC-registered tables use this scheme).
     spark.hadoop.fs.s3.multipart.size                    268435456
