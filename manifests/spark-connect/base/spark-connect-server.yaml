@@ -619,6 +619,9 @@ data:
     # those reads fail with `Change detection policy requires ETag` because
     # MinIO/s3proxy doesn't return ETags.
     spark.hadoop.fs.s3.endpoint                          http://10.10.0.10:9000
+    # hive-warehouse migrated to the magnum SSD s3proxy; route only that bucket there (mirror of the fs.s3a override above).
+    spark.hadoop.fs.s3.bucket.hive-warehouse.endpoint    http://magnum.files.svc.cluster.local:9000
+    spark.hadoop.fs.s3.bucket.hive-warehouse.path.style.access  true
     spark.hadoop.fs.s3.path.style.access                 true
     spark.hadoop.fs.s3.connection.ssl.enabled            false
     spark.hadoop.fs.s3.access.key                        electinfo
